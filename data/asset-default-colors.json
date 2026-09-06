@@ -1,0 +1,3039 @@
+{
+ "ClothOuter/LeatherJacket": [
+  "#585858",
+  "#655A42",
+  "#585858"
+ ],
+ "ClothOuter/JacketHoodie": [
+  "#8a8b8b",
+  "#5a5b5a",
+  "#5a5b5a",
+  "#8a8b8b",
+  "#eceded",
+  "#5a5b5a",
+  "#5a5b5a"
+ ],
+ "Cloth/CollegeOutfit1": [
+  "#202020"
+ ],
+ "Cloth/MaidOutfit1": [
+  "#212121"
+ ],
+ "Cloth/MaidOutfit2": [
+  "#212121"
+ ],
+ "Cloth/OffTheShoulderTop": [
+  "#F2AADC",
+  "#F2AADC"
+ ],
+ "Cloth/ChineseDress2": [
+  "#858585"
+ ],
+ "Cloth/CustomTShirt": [
+  "#FD8D8F"
+ ],
+ "Cloth/MilitaryFatigue": [
+  "#7a826c",
+  "#4d4038",
+  "#000000"
+ ],
+ "Cloth/SleevelessTop": [
+  "#1C1A21"
+ ],
+ "Cloth/HeavyLeatherDress": [
+  "#808080",
+  "#505050",
+  "#808080"
+ ],
+ "Cloth/LatexHobbleDress": [
+  "#E0E0E0",
+  "#909090",
+  "#AAAA80",
+  "#E0E0E0",
+  "#909090",
+  "#AAAA80",
+  "#909090",
+  "#AAAA80"
+ ],
+ "Cloth/GrandMage": [
+  "#720DBB",
+  "#3C0C5E",
+  "#DFDFEC",
+  "#682E0F",
+  "#858482"
+ ],
+ "Cloth/FuzzyDress": [
+  "#cf2828"
+ ],
+ "Cloth/SlaveRags": [
+  "#886D5D",
+  "#886D58",
+  "#8B6945"
+ ],
+ "Cloth/CheerleaderTop": [
+  "#c91616",
+  "#e0b51d",
+  "#c91616",
+  "#242485",
+  "#f5f5f5"
+ ],
+ "Cloth/FishnetTop": [
+  "#1C1C1C"
+ ],
+ "Cloth/MeshTop": [
+  "#1C1C1C",
+  "#1C1C1C"
+ ],
+ "Cloth/AnimeGirl": [
+  "#9C9C9C",
+  "#E7D371",
+  "#ABC4C8",
+  "#B2A153",
+  "#D7C468",
+  "#B0B0B0",
+  "#B0A055"
+ ],
+ "Cloth/RibbonCorset": [
+  "#707070",
+  "#AE9974",
+  "#F56899"
+ ],
+ "Cloth/MaidBikini": [
+  "#606060",
+  "#5B5B5B",
+  "#808080"
+ ],
+ "Cloth/CocktailDress": [
+  "#951B16",
+  "#90662B"
+ ],
+ "Cloth/ButtonShirt": [
+  "#b4b4b4",
+  "#3858aa",
+  "#8c8c8c"
+ ],
+ "Cloth/RuffledDress": [
+  "#BF1717",
+  "#BF1717",
+  "#BF1717",
+  "#1F1A1A",
+  "#BF1717",
+  "#BF1717",
+  "#BF1717",
+  "#1F1A1A",
+  "#BF1717",
+  "#BF1717",
+  "#1F1A1A",
+  "#BF1717",
+  "#1F1A1A",
+  "#1F1A1A"
+ ],
+ "Cloth/LolitaShortDress": [
+  "#000000",
+  "#0E164D",
+  "#020212",
+  "#040820",
+  "#020212",
+  "#121113",
+  "#000000",
+  "#363330",
+  "#0E164D",
+  "#020212",
+  "#0E164D",
+  "#020212",
+  "#0E164D",
+  "#020212",
+  "#0E164D",
+  "#020212",
+  "#0E164D",
+  "#020212",
+  "#0E164D",
+  "#020212",
+  "#0E164D",
+  "#020212",
+  "#0E164D",
+  "#020212",
+  "#1D1D1D",
+  "#000000",
+  "#0E164D",
+  "#020212"
+ ],
+ "Cloth/CrimsonCloudsInkRhymeQipaoDress": [
+  "#302D2D",
+  "#2C2626",
+  "#000000",
+  "#302D2D",
+  "#2C2626",
+  "#000000",
+  "#302D2D",
+  "#2C2626"
+ ],
+ "Cloth/GardenDress": [
+  "#303030"
+ ],
+ "Cloth/CrossStrapDress": [
+  "#1F1F1F",
+  "#1F1F1F",
+  "#1F1F1F",
+  "#1F1F1F",
+  "#FFFFFF"
+ ],
+ "Cloth/AllureSidecut": [
+  "#000000",
+  "#000000",
+  "#000000",
+  "#625F6C",
+  "#000000"
+ ],
+ "Cloth/WhiteDress": [
+  "#D3CAAE",
+  "#4E6F7A"
+ ],
+ "Cloth/LaceBraNightgown": [
+  "#797070",
+  "#937373",
+  "#25251F",
+  "#AA8484"
+ ],
+ "Cloth/LongQipaoDress": [
+  "#000000",
+  "#000000"
+ ],
+ "Cloth/MaidApron": [
+  "#000000"
+ ],
+ "ClothAccessory/SideRuffles": [
+  "#808080"
+ ],
+ "ClothAccessory/HoodedCloak": [
+  "#7C0F0B",
+  "#911713",
+  "#7E120F",
+  "#A0140F"
+ ],
+ "ClothAccessory/FacePaint": [
+  "#9A7F76"
+ ],
+ "ClothAccessory/Scarf": [
+  "#B1B1B1"
+ ],
+ "ClothAccessory/Glitter": [
+  "#DCA07C",
+  "#DCA07C"
+ ],
+ "ClothAccessory/Kissmark": [
+  "#B42340"
+ ],
+ "ClothAccessory/LargeBelt": [
+  "#E59292",
+  "#FFFFFF",
+  "#FFFFFF",
+  "#909090"
+ ],
+ "ClothAccessory/LargeBeltClassic": [
+  "#D2BC5C",
+  "#D63E3E",
+  "#D63E3E",
+  "#B0B0B0"
+ ],
+ "ClothAccessory/BugLegs": [
+  "#406A50",
+  "#7F795F"
+ ],
+ "ClothAccessory/BodyWritings": [
+  "#000000"
+ ],
+ "ClothAccessory/LeatherBeltCloth": [
+  "#755F37",
+  "#808080"
+ ],
+ "ClothAccessory/ComboBelt": [
+  "#E59292",
+  "#A0A0A0",
+  "#808080"
+ ],
+ "ClothAccessory/RuffledCollar": [
+  "#A8437D",
+  "#B0B0B0",
+  "#B0B0B0",
+  "#AAAAAA",
+  "#B0B0B0",
+  "#A8437D"
+ ],
+ "ClothAccessory/SmallNeckFur": [
+  "#CECF6B"
+ ],
+ "ClothAccessory/LargeNeckFur": [
+  "#2E2D2D",
+  "#4C1C1C",
+  "#2E2D2D"
+ ],
+ "ClothAccessory/SpikyNeckFur": [
+  "#1E1E1E",
+  "#1E1E1E",
+  "#1E1E1E"
+ ],
+ "ClothAccessory/FuzzyScarf": [
+  "#1E1E1E"
+ ],
+ "ClothAccessory/VampiricCloak": [
+  "#4f0000",
+  "#4f1E1E",
+  "#E2C1BC"
+ ],
+ "ClothAccessory/XmasShortShawl": [
+  "#490707",
+  "#490707",
+  "#F0F0F0",
+  "#F0F0F0"
+ ],
+ "ClothAccessory/XmasLongShawl": [
+  "#490707",
+  "#490707",
+  "#F0F0F0",
+  "#F0F0F0"
+ ],
+ "ClothAccessory/BowBelt": [
+  "#1F1A1A",
+  "#1F1A1A"
+ ],
+ "ClothAccessory/BowAccessory": [
+  "#7d7d7d",
+  "#92a3a8",
+  "#a888a7",
+  "#a8a580",
+  "#7699a8",
+  "#7d7d7d",
+  "#92a3a8",
+  "#a888a7",
+  "#a8a580",
+  "#7699a8"
+ ],
+ "ClothAccessory/DollHandle": [
+  "#111111",
+  "#FFFFFF",
+  "#111111",
+  "#FFFFFF"
+ ],
+ "Necklace/FlowerGarland": [
+  "#AC5B9D",
+  "#E4E988"
+ ],
+ "Necklace/AnimeGirlNecklace": [
+  "#E7D371",
+  "#ABC4C8",
+  "#B2A153"
+ ],
+ "Necklace/RosePendant": [
+  "#8F8B69",
+  "#691919"
+ ],
+ "Necklace/RuffledCollar": [
+  "#A8437D",
+  "#B0B0B0",
+  "#B0B0B0",
+  "#AAAAAA",
+  "#B0B0B0",
+  "#A8437D"
+ ],
+ "Necklace/BodyChainNecklace": [
+  "#d1951f",
+  "#d1951f"
+ ],
+ "Necklace/BeadNecklace": [
+  "#A99EA0",
+  "#F3F3F3",
+  "#887F7F",
+  "#E6E6E6",
+  "#9E1515",
+  "#E6E6E6",
+  "#E5E5E5",
+  "#249CCD",
+  "#051318",
+  "#CBBDA1",
+  "#988766"
+ ],
+ "Necklace/EldritchNecklace": [
+  "#802684",
+  "#884A9D"
+ ],
+ "Necklace/PlantNecklace": [
+  "#149013",
+  "#09770B",
+  "#C42CD0"
+ ],
+ "Necklace/NecklaceRoseBallGag": [
+  "#960000",
+  "#AFAC69",
+  "#202020"
+ ],
+ "Suit/DiaperSuit": [
+  "#989898",
+  "#9B9399",
+  "#ABABAB"
+ ],
+ "Suit/PilotSuit": [
+  "#3270C1",
+  "#2B408B",
+  "#969696",
+  "#2B408B",
+  "#2B408B"
+ ],
+ "Suit/BartenderVest": [
+  "#893939",
+  "#897E66"
+ ],
+ "Suit/BartenderVestM": [
+  "#606060"
+ ],
+ "Suit/GlossyBodystocking": [
+  "#111111",
+  "#111111",
+  "#251515",
+  "#251515",
+  "#251515",
+  "#000000",
+  "#111111",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000"
+ ],
+ "SuitLower/DiaperSuit": [
+  "#989898",
+  "#9B9399",
+  "#ABABAB",
+  "#EAD889"
+ ],
+ "SuitLower/PilotSuit": [
+  "#3270C1",
+  "#2B408B",
+  "#969696",
+  "#282828"
+ ],
+ "SuitLower/PilotPanties": [
+  "#3270C1",
+  "#2B408B",
+  "#969696",
+  "#282828"
+ ],
+ "SuitLower/MaleSeamlessCatsuit": [
+  "#000000"
+ ],
+ "SuitLower/MaleCatsuitPanties": [
+  "#000000"
+ ],
+ "ClothLower/Tutu": [
+  "#845e9e",
+  "#c385d0",
+  "#e4d1fc",
+  "#927D99",
+  "#811790"
+ ],
+ "ClothLower/HulaSkirt": [
+  "#40B90B",
+  "#C46E9A",
+  "#F5DC34"
+ ],
+ "ClothLower/GymShorts": [
+  "#900100",
+  "#ececec",
+  "#970101",
+  "#f4f5f4"
+ ],
+ "ClothLower/UtilityKilt": [
+  "#202020",
+  "#202020",
+  "#202020",
+  "#6E693D",
+  "#690909",
+  "#6E693D",
+  "#202020",
+  "#6E693D",
+  "#690909",
+  "#6E693D",
+  "#6E693D",
+  "#202020"
+ ],
+ "ClothLower/CheerleaderSkirt": [
+  "#c91616",
+  "#e0b51d",
+  "#c91616"
+ ],
+ "ClothLower/TulleSkirt": [
+  "#131313",
+  "#101010"
+ ],
+ "ClothLower/RuffledMiniskirt": [
+  "#303131",
+  "#6b1b1a",
+  "#6b1b1a"
+ ],
+ "ClothLower/PVCHobbleSkirt": [
+  "#9D2626",
+  "#9D2626"
+ ],
+ "ClothLower/Halfpleatedskirt": [
+  "#7F1739"
+ ],
+ "ClothLower/SlitColumnSkirt": [
+  "#7F1739"
+ ],
+ "ClothLower/WoolenHighWaistSkirt": [
+  "#560E0E",
+  "#560E0E",
+  "#1F1F1F"
+ ],
+ "ClothLower/MilitaryPants": [
+  "#7a826c",
+  "#4d4038",
+  "#000000"
+ ],
+ "Bra/MaidBra1": [
+  "#212121"
+ ],
+ "Bra/SportSwimsuit": [
+  "#011e54",
+  "#a70004",
+  "#d4d5d4"
+ ],
+ "Bra/SportBra": [
+  "#414141",
+  "#cecfcf",
+  "#cf0001",
+  "#444444"
+ ],
+ "Bra/LeatherBunnyHollowBra": [
+  "#111111",
+  "#111111",
+  "#ffffff",
+  "#909090"
+ ],
+ "Bra/Bandage": [
+  "#929292",
+  "#929292"
+ ],
+ "Bra/SatinCorset": [
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000"
+ ],
+ "Bra/MaidBra": [
+  "#7A7A7A",
+  "#7A7A7A"
+ ],
+ "Bra/OrnateMetalBra": [
+  "#818181",
+  "#009848",
+  "#76EC82"
+ ],
+ "Bra/Pasties1": [
+  "#B16565",
+  "#B16565"
+ ],
+ "Corset/Corset6": [
+  "#435331",
+  "#363535",
+  "#A08759"
+ ],
+ "Corset/RibbonCorset": [
+  "#707070",
+  "#AE9974",
+  "#F56899"
+ ],
+ "Corset/ExtremeCorset": [
+  "#545454",
+  "#EEEEEE",
+  "#BC8B84"
+ ],
+ "Corset/TightCorset": [
+  "#C7BCB4",
+  "#808080"
+ ],
+ "Panties/Diapers1": [
+  "#8B8B8B",
+  "#C7A623"
+ ],
+ "Panties/Diapers2": [
+  "#8B8B8B",
+  "#C7A623",
+  "#8B8B8B"
+ ],
+ "Panties/Diapers3": [
+  "#8B8B8B",
+  "#646357"
+ ],
+ "Panties/Diapers4": [
+  "#867481",
+  "#C7A623"
+ ],
+ "Panties/BulkyDiaper": [
+  "#688599",
+  "#808080",
+  "#8c7384",
+  "#BF3F97",
+  "#C7A623"
+ ],
+ "Panties/PoofyDiaper": [
+  "#9763A6",
+  "#658AA6",
+  "#997391",
+  "#a916cc",
+  "#C7A623"
+ ],
+ "Panties/LatexDiaper": [
+  "#9763A6",
+  "#658AA6",
+  "#C7A623"
+ ],
+ "Panties/RoyalDiaper": [
+  "#92D1FF",
+  "#FFEA00",
+  "#D6CB53"
+ ],
+ "Panties/UntrainersThin": [
+  "#d6efff",
+  "#7B7B7B",
+  "#8197A7",
+  "#4880B9",
+  "#B5A95B",
+  "#AAA44E"
+ ],
+ "Panties/MaidPanties2": [
+  "#212121"
+ ],
+ "Panties/RedBowPanties": [
+  "#E70505"
+ ],
+ "Panties/PilotPanties": [
+  "#3270C1",
+  "#2B408B",
+  "#969696"
+ ],
+ "Panties/SportPanties": [
+  "#313030",
+  "#d11716",
+  "#313030"
+ ],
+ "Panties/HipHarness": [
+  "#AC8651",
+  "#E0E0E0",
+  "#606060",
+  "#606060",
+  "#606060"
+ ],
+ "Panties/WaistLegHarness": [
+  "#606060",
+  "#E0E0E0",
+  "#606060",
+  "#606060",
+  "#E0E0E0",
+  "#606060",
+  "#E0E0E0"
+ ],
+ "Panties/FemPelvisHarness": [
+  "#454545",
+  "#909090"
+ ],
+ "Panties/BoxerShorts": [
+  "#FFFFFF"
+ ],
+ "Panties/MaleCatsuitPanties": [
+  "#000000"
+ ],
+ "Panties/Briefs": [
+  "#00A1EA",
+  "#CDCDCD"
+ ],
+ "Panties/Jockstrap": [
+  "#222222",
+  "#C01C1C",
+  "#C01C1C",
+  "#C01C1C"
+ ],
+ "Panties/CockSock": [
+  "#363636",
+  "#FF7386",
+  "#FF7386"
+ ],
+ "Panties/PearlStrapPanties": [
+  "#545454",
+  "#000000"
+ ],
+ "Socks/SocksFur": [
+  "#8c2331"
+ ],
+ "Socks/GradientPantyhose": [
+  "#8D7B7B",
+  "#433BA3"
+ ],
+ "Socks/VSocks1": [
+  "#663699"
+ ],
+ "Socks/RippedPantyhose": [
+  "#755656",
+  "#5D041E"
+ ],
+ "Socks/NetSocks": [
+  "#351C1C",
+  "#351C1C",
+  "#1C1111",
+  "#1C1111",
+  "#170E0E",
+  "#170E0E",
+  "#000000"
+ ],
+ "Socks/LegWarmers1": [
+  "#8D8D8D",
+  "#8D8D8D"
+ ],
+ "SocksRight/SocksFur": [
+  "#8c2331"
+ ],
+ "SocksRight/VSocks1": [
+  "#663699"
+ ],
+ "SocksRight/LooseSocks": [
+  "#A0A0A0"
+ ],
+ "SocksRight/HeelBinders": [
+  "#808080"
+ ],
+ "SocksLeft/SocksFur": [
+  "#8c2331"
+ ],
+ "SocksLeft/VSocks1": [
+  "#663699"
+ ],
+ "SocksLeft/LooseSocks": [
+  "#A0A0A0"
+ ],
+ "SocksLeft/HeelBinders": [
+  "#808080"
+ ],
+ "AnkletRight/HeelBinders": [
+  "#808080"
+ ],
+ "AnkletLeft/HeelBinders": [
+  "#808080"
+ ],
+ "Garters/HipHarness": [
+  "#AC8651",
+  "#E0E0E0",
+  "#606060",
+  "#606060",
+  "#606060"
+ ],
+ "Garters/WaistLegHarness": [
+  "#606060",
+  "#E0E0E0",
+  "#606060",
+  "#606060",
+  "#E0E0E0",
+  "#606060",
+  "#E0E0E0"
+ ],
+ "Garters/ComboBelt": [
+  "#E59292",
+  "#A0A0A0",
+  "#808080"
+ ],
+ "Garters/FemPelvisHarness": [
+  "#454545",
+  "#909090"
+ ],
+ "Garters/ButterflyGarter": [
+  "#F2AADC",
+  "#F2AADC"
+ ],
+ "Garters/LaceLegRing": [
+  "#E3E3E3",
+  "#181818",
+  "#3F3F3F",
+  "#E3E3E3",
+  "#181818",
+  "#3F3F3F"
+ ],
+ "Garters/XLegStraps": [
+  "#141414"
+ ],
+ "Garters/SocksBow": [
+  "#991d1d",
+  "#991d1d",
+  "#991d1d",
+  "#991d1d",
+  "#991d1d",
+  "#991d1d",
+  "#991d1d",
+  "#991d1d"
+ ],
+ "Shoes/SneakersSport": [
+  "#3A271E",
+  "#50463B"
+ ],
+ "Shoes/AnkleBoots1": [
+  "#874D4D",
+  "#5A3A3A",
+  "#976E6E"
+ ],
+ "Shoes/SandalsRS": [
+  "#AA9977",
+  "#999999"
+ ],
+ "Shoes/LatexAnkleShoes": [
+  "#373636"
+ ],
+ "Shoes/DeluxeBoots": [
+  "#9F0D0D",
+  "#700A0A",
+  "#700A0A",
+  "#9F0D0D"
+ ],
+ "Shoes/FuturisticHeels2": [
+  "#50913C",
+  "#aaaaaa"
+ ],
+ "Shoes/FuzzyBoots": [
+  "#941a1a"
+ ],
+ "Shoes/MaryShoes": [
+  "#E22737"
+ ],
+ "Shoes/StilettoHeels": [
+  "#090909",
+  "#A80000",
+  "#800000"
+ ],
+ "Shoes/AnimeGirlBoots": [
+  "#DDCA6A",
+  "#A0A0A0"
+ ],
+ "Shoes/CustomHeels": [
+  "#AC9F8A",
+  "#AC9F8A",
+  "#AC9F8A",
+  "#AC9F8A"
+ ],
+ "Shoes/FullLegBoots": [
+  "#353535"
+ ],
+ "Shoes/IndoorSlippers": [
+  "#F75F8F",
+  "#FC80AE"
+ ],
+ "Shoes/WitchShoes": [
+  "#303030",
+  "#E0E0E0",
+  "#E14055",
+  "#AAAAAA"
+ ],
+ "Shoes/HeellessHoof": [
+  "#454545",
+  "#877C66"
+ ],
+ "Shoes/HoofBoots": [
+  "#413A2B",
+  "#252525",
+  "#A18F55",
+  "#877C66"
+ ],
+ "Shoes/CombatBoots": [
+  "#202020",
+  "#202020",
+  "#6E693D",
+  "#690909"
+ ],
+ "Shoes/ZipperBBoots": [
+  "#252525",
+  "#505050"
+ ],
+ "Shoes/PumpHighHeels": [
+  "#F97C1A",
+  "#F97C1A",
+  "#909090"
+ ],
+ "Shoes/HoofShoe": [
+  "#000000",
+  "#212121"
+ ],
+ "Shoes/PrintedCrocs": [
+  "#6F8460"
+ ],
+ "Shoes/MaryJaneShoes": [
+  "#202020",
+  "#202020",
+  "#757575",
+  "#FFFFFF"
+ ],
+ "Shoes/PeeptoeHeels": [
+  "#FFFFFF",
+  "#FFFFFF",
+  "#000000",
+  "#000000",
+  "#000000",
+  "#000000"
+ ],
+ "Shoes/ToeRing": [
+  "#9B9897",
+  "#9B9897",
+  "#9B9897",
+  "#9B9897",
+  "#9B9897",
+  "#9B9897",
+  "#9B9897",
+  "#9B9897",
+  "#9B9897",
+  "#9B9897"
+ ],
+ "Hat/Bandana": [
+  "#DC3434",
+  "#FFFFFF"
+ ],
+ "Hat/Gat": [
+  "#202020",
+  "#202020"
+ ],
+ "Hat/FacePaint": [
+  "#9A7F76"
+ ],
+ "Hat/RoseCrown": [
+  "#1B7E1B",
+  "#BE2B2B"
+ ],
+ "Hat/FlowerCrown": [
+  "#AA7386",
+  "#B25576"
+ ],
+ "Hat/PoppyCrown": [
+  "#F7B405",
+  "#D816DA",
+  "#2635C4",
+  "#54BF28",
+  "#F7B405"
+ ],
+ "Hat/BallCapBack": [
+  "#3B3B3B",
+  "#CCCC32",
+  "#424242",
+  "#3B3B3B"
+ ],
+ "Hat/BallCapFront": [
+  "#3B3B3B",
+  "#3B3B3B",
+  "#3B3B3B",
+  "#CCCC32",
+  "#424242"
+ ],
+ "Hat/SwimCap": [
+  "#1781A1",
+  "#AAAAAA"
+ ],
+ "Hat/CowboyHat": [
+  "#78543D",
+  "#473930"
+ ],
+ "Hat/Beanie": [
+  "#8d1919"
+ ],
+ "Hat/NunHabit": [
+  "#FFFFFF",
+  "#282F50",
+  "#FFFFFF",
+  "#EF9C00"
+ ],
+ "Hat/PirateHat": [
+  "#242424",
+  "#EBEBEB",
+  "#247234",
+  "#CB771A",
+  "#A92626",
+  "#FFFFFF"
+ ],
+ "Hat/JesterHat": [
+  "#FFCC00",
+  "#15BDBD",
+  "#750000",
+  "#FF1EEC",
+  "#7A5B29",
+  "#7A5B29",
+  "#7A5B29",
+  "#33cc33",
+  "#3333cc",
+  "#cccc33",
+  "#808080",
+  "#202020",
+  "#202020"
+ ],
+ "Hat/AnimeGirlTiara": [
+  "#908759",
+  "#E6D271",
+  "#ABC4C8"
+ ],
+ "Hat/VintageHat": [
+  "#5A2C0C",
+  "#E64747",
+  "#AD2848"
+ ],
+ "Hat/CheapHelmet": [
+  "#988837"
+ ],
+ "Hat/FlatCap": [
+  "#5A2C0C",
+  "#E64747"
+ ],
+ "Hat/NPCBalloon": [
+  "#383838",
+  "#535353",
+  "#FF1A1A",
+  "#FF1A1A",
+  "#FF1A1A",
+  "#FF1A1A"
+ ],
+ "Hat/WitchHat": [
+  "#111111",
+  "#111111",
+  "#111111",
+  "#111111",
+  "#5e5c5c",
+  "#828282",
+  "#f1c4c4",
+  "#A9AFAF"
+ ],
+ "HairAccessory1/EarWarmer": [
+  "#808080",
+  "#A0A0A0"
+ ],
+ "HairAccessory1/CyberEars": [
+  "#3c3c3c",
+  "#9cdede",
+  "#7ccaca",
+  "#bbbbbb",
+  "#9e9e9e"
+ ],
+ "HairAccessory1/FloppyBunnyEars": [
+  "#a26c36",
+  "#c4a59a",
+  "#944d90",
+  "#a26c36",
+  "#000000"
+ ],
+ "HairAccessory1/SkunkEars": [
+  "#262626",
+  "#706A3D"
+ ],
+ "HairAccessory1/CustomizableFluffyEars1": [
+  "#FAFAFA",
+  "#B3F8FC",
+  "#7EB6BA",
+  "#AFAFAF"
+ ],
+ "HairAccessory1/CustomizableFluffyEars2": [
+  "#262626",
+  "#1F1D1D",
+  "#641328",
+  "#43151E"
+ ],
+ "HairAccessory1/CustomizableFluffyEars3": [
+  "#F6F6F6",
+  "#99243C",
+  "#292929",
+  "#E0E0E0"
+ ],
+ "HairAccessory1/CustomizableCatEars": [
+  "#DBDBDB",
+  "#F6F6F6",
+  "#141138"
+ ],
+ "HairAccessory1/CustomizableCowEars": [
+  "#C37777",
+  "#F6F6F6",
+  "#111111"
+ ],
+ "HairAccessory1/Antenna": [
+  "#8F8F8F",
+  "#000000",
+  "#131313",
+  "#5C0000",
+  "#600000",
+  "#8F8F8F",
+  "#000000",
+  "#131313",
+  "#5C0000",
+  "#600000"
+ ],
+ "Gloves/GlovesFur": [
+  "#8c2331"
+ ],
+ "Gloves/FishnetGloves": [
+  "#151515"
+ ],
+ "Gloves/BikerGloves": [
+  "#65696E",
+  "#2A2A2A"
+ ],
+ "Gloves/WarmGloves": [
+  "#606060",
+  "#bf7d3b"
+ ],
+ "Gloves/AnimeGirlGloves": [
+  "#DBDBDB",
+  "#CEBC64"
+ ],
+ "HandAccessoryLeft/Claws": [
+  "#CC3333",
+  "#222222"
+ ],
+ "HandAccessoryLeft/Fingernails": [
+  "#CC3333",
+  "#222222"
+ ],
+ "HandAccessoryLeft/CatsuitGloves": [
+  "#992F7D"
+ ],
+ "HandAccessoryLeft/Rings": [
+  "#A48537",
+  "#707070",
+  "#00D307",
+  "#222222",
+  "#CC3333",
+  "#222222",
+  "#CC3333"
+ ],
+ "HandAccessoryRight/Claws": [
+  "#CC3333",
+  "#222222"
+ ],
+ "HandAccessoryRight/Fingernails": [
+  "#CC3333",
+  "#222222"
+ ],
+ "HandAccessoryRight/CatsuitGloves": [
+  "#992F7D"
+ ],
+ "HandAccessoryRight/Rings": [
+  "#A48537",
+  "#707070",
+  "#00D307",
+  "#222222",
+  "#CC3333",
+  "#222222",
+  "#CC3333",
+  "#737373",
+  "#C2C2C2"
+ ],
+ "Bracelet/SpikeBands": [
+  "#232323",
+  "#666666"
+ ],
+ "Bracelet/Wristband": [
+  "#B4D05E",
+  "#B4D05E"
+ ],
+ "Bracelet/LaceBands": [
+  "#151515"
+ ],
+ "Bracelet/WristWatch": [
+  "#270D8B",
+  "#0F0F0F",
+  "#C3C3C3"
+ ],
+ "Glasses/Goggles": [
+  "#9B9C58",
+  "#303030",
+  "#9A9999"
+ ],
+ "Glasses/VGlasses": [
+  "#93861F",
+  "#7F0202"
+ ],
+ "Glasses/GradientSunglasses": [
+  "#303030",
+  "#303030"
+ ],
+ "Glasses/JokeGlasses": [
+  "#303030"
+ ],
+ "Glasses/StreetEyewear": [
+  "#303030",
+  "#808080",
+  "#808080"
+ ],
+ "Glasses/Pincenez": [
+  "#DDB792",
+  "#BC9768",
+  "#BC9768",
+  "#A99777"
+ ],
+ "Glasses/RoundSunglasses": [
+  "#928D7C",
+  "#A89A6C",
+  "#A89A6C",
+  "#BBAC83"
+ ],
+ "Glasses/VintageSunglasses": [
+  "#A0A0A0",
+  "#E5731B",
+  "#E5731B",
+  "#D7AA60"
+ ],
+ "Glasses/ShutterSunshades": [
+  "#FF587E",
+  "#FF587E",
+  "#FF587E"
+ ],
+ "Jewelry/JewelrySet": [
+  "#ACACAC",
+  "#ACACAC",
+  "#ACACAC"
+ ],
+ "Jewelry/AnkletA": [
+  "#9FEEFF"
+ ],
+ "Jewelry/NavelBar1": [
+  "#CDCCCA",
+  "#CDCCCA",
+  "#5C7ABE"
+ ],
+ "Mask/FacePaint": [
+  "#9A7F76"
+ ],
+ "Mask/PetNose": [
+  "#D19D55",
+  "#2F2E2E",
+  "#BEBEBE",
+  "#111111"
+ ],
+ "Mask/Glitter": [
+  "#DCA07C",
+  "#DCA07C"
+ ],
+ "Mask/HeadHarness": [
+  "#909090",
+  "#383838"
+ ],
+ "Mask/Kissmark": [
+  "#B42340"
+ ],
+ "Mask/SwimCap": [
+  "#1781A1",
+  "#AAAAAA"
+ ],
+ "Mask/DroneMask": [
+  "#222222",
+  "#CCCCCC",
+  "#7F7F7F",
+  "#00F4FD",
+  "#E700CA"
+ ],
+ "Mask/LatexMuzzleMask": [
+  "#141414"
+ ],
+ "Mask/RubberMask": [
+  "#A28E8C",
+  "#EBB2B2",
+  "#A28E8C",
+  "#D6ABA8",
+  "#915A54",
+  "#6B77C3",
+  "#FC8D8D",
+  "#B26D66",
+  "#B26D66",
+  "#AAAA80"
+ ],
+ "Mask/EldritchMask": [
+  "#191919",
+  "#35DDB9"
+ ],
+ "Mask/DemonMask": [
+  "#262626",
+  "#42D8C1",
+  "#8E0000",
+  "#8E0000",
+  "#E5E5E5"
+ ],
+ "Mask/AngelMask": [
+  "#DFDFDF",
+  "#BAB65C",
+  "#BAB65C",
+  "#BAB65C",
+  "#E5E5E5"
+ ],
+ "Mask/NecromancerHelmet": [
+  "#111111",
+  "#262626",
+  "#BAB65C",
+  "#B91414",
+  "#292929"
+ ],
+ "Mask/Kigu2Hood": [
+  "#707070",
+  "#404040",
+  "#404040",
+  "#E14055",
+  "#606060"
+ ],
+ "Mask/ForeheadJewelry": [
+  "#966C2D",
+  "#368DBF",
+  "#368DBF"
+ ],
+ "TailStraps/DragonsTail": [
+  "#7DBBE9",
+  "#8DE49F",
+  "#1732EF",
+  "#A9F3D0",
+  "#253DF1"
+ ],
+ "TailStraps/Tentacles": [
+  "#c43ba4",
+  "#b832b6",
+  "#9221ba"
+ ],
+ "TailStraps/LatexFoxTail": [
+  "#141414"
+ ],
+ "TailStraps/KitsuneTailStraps": [
+  "#1E1E1E",
+  "#4E1313",
+  "#1E1E1E",
+  "#4E1313",
+  "#1E1E1E",
+  "#4E1313",
+  "#1E1E1E",
+  "#4E1313",
+  "#1E1E1E",
+  "#4E1313",
+  "#1E1E1E",
+  "#4E1313",
+  "#4E1313",
+  "#1E1E1E",
+  "#4E1313",
+  "#1E1E1E",
+  "#4E1313",
+  "#1E1E1E",
+  "#4E1313",
+  "#1E1E1E"
+ ],
+ "TailStraps/SkunkTail": [
+  "#181818",
+  "#706A3D"
+ ],
+ "TailStraps/LargeBushyTail": [
+  "#8F5F2D"
+ ],
+ "Wings/SteampunkWings": [
+  "#707070",
+  "#707070",
+  "#2F2DCC",
+  "#707070"
+ ],
+ "Wings/BeeWings": [
+  "#4896c3",
+  "#ccd44f"
+ ],
+ "Wings/CyberWings": [
+  "#2ab4c5",
+  "#b21fd8",
+  "#25dce6"
+ ],
+ "Wings/PixieWings": [
+  "#0e70b4",
+  "#086cb2"
+ ],
+ "Wings/Wing1": [
+  "#141414",
+  "#000000"
+ ],
+ "Wings/BotEnergyWings": [
+  "#5DF6FF",
+  "#52E4D2",
+  "#008DD9",
+  "#987731",
+  "#41514E"
+ ],
+ "BodyMarkings/BodyWritings": [
+  "#000000"
+ ],
+ "BodyMarkings/FaceScars": [
+  "#242424"
+ ],
+ "FaceMarkings/FaceWritings": [
+  "#000000"
+ ],
+ "FaceMarkings/FaceCrests": [
+  "#00F4FD",
+  "#00F4FD",
+  "#00F4FD",
+  "#00F4FD"
+ ],
+ "HairFront/HairFront60": [
+  "#E01010",
+  "#AFAFAF"
+ ],
+ "Eyes/Eyes14": [
+  "#6B82A2",
+  "#242424"
+ ],
+ "Eyes/Eyes15": [
+  "#6B82A2",
+  "#242424"
+ ],
+ "Eyes2/Eyes14": [
+  "#6B82A2",
+  "#242424"
+ ],
+ "Eyes2/Eyes15": [
+  "#6B82A2",
+  "#242424"
+ ],
+ "ItemFeet/NylonRope": [
+  "#CCCCCC",
+  "#CCCCCC",
+  "#CCCCCC"
+ ],
+ "ItemFeet/SturdyLeatherBelts": [
+  "#11161B",
+  "#403E40",
+  "#11161B",
+  "#403E40",
+  "#11161B",
+  "#403E40"
+ ],
+ "ItemFeet/LeatherAnkleCuffs": [
+  "#2E2E2E"
+ ],
+ "ItemFeet/LeatherDeluxeAnkleCuffs": [
+  "#612C2C"
+ ],
+ "ItemFeet/FuturisticAnkleCuffs": [
+  "#40812C",
+  "#707070"
+ ],
+ "ItemFeet/Tentacles": [
+  "#c43ba4",
+  "#b832b6",
+  "#9221ba"
+ ],
+ "ItemFeet/Slime": [
+  "#57ab5e",
+  "#57ab5e"
+ ],
+ "ItemFeet/MassiveAnkleCuffs": [
+  "#909090",
+  "#808080"
+ ],
+ "ItemFeet/HeelBinders": [
+  "#808080",
+  "#AAAAAA",
+  "#606060",
+  "#AAAAAA"
+ ],
+ "ItemFeet/KneeOvernighter": [
+  "#505050",
+  "#BBBBBB"
+ ],
+ "ItemLegs/NylonRope": [
+  "#CCCCCC",
+  "#CCCCCC",
+  "#CCCCCC"
+ ],
+ "ItemLegs/SturdyLeatherBelts": [
+  "#11161B",
+  "#403E40",
+  "#11161B",
+  "#403E40"
+ ],
+ "ItemLegs/LeatherLegCuffs": [
+  "#2E2E2E"
+ ],
+ "ItemLegs/LeatherDeluxeLegCuffs": [
+  "#612C2C"
+ ],
+ "ItemLegs/FuturisticLegCuffs": [
+  "#40812C",
+  "#707070"
+ ],
+ "ItemLegs/ShinyLegBinder": [
+  "#FFFFFF"
+ ],
+ "ItemLegs/Tentacles": [
+  "#c43ba4",
+  "#b832b6",
+  "#9221ba"
+ ],
+ "ItemLegs/Slime": [
+  "#57ab5e",
+  "#57ab5e"
+ ],
+ "ItemLegs/FrogtieMetalCuffs": [
+  "#707070"
+ ],
+ "ItemLegs/StrappedPetsuitLegs": [
+  "#790000",
+  "#202020",
+  "#202020",
+  "#8D6060"
+ ],
+ "ItemLegs/PawPaddedPetsuitLegs": [
+  "#181818",
+  "#131313",
+  "#F40000",
+  "#252525",
+  "#323232",
+  "#760000"
+ ],
+ "ItemVulva/FuturisticVibrator": [
+  "#3C724C"
+ ],
+ "ItemVulva/HempRopeBelt": [
+  "#956B1C"
+ ],
+ "ItemVulva/DoubleEndDildo": [
+  "#624662"
+ ],
+ "ItemVulva/Stitches": [
+  "#3f3c3a"
+ ],
+ "ItemVulva/PlasticChastityCage1": [
+  "#8D8D8D"
+ ],
+ "ItemVulva/VibeEggPenisBase": [
+  "#323232",
+  "#EFB0F4"
+ ],
+ "ItemVulva/PlasticChastityCage2": [
+  "#404040",
+  "#404040",
+  "#FFBC00"
+ ],
+ "ItemVulva/TechnoChastityCage": [
+  "#555555",
+  "#555555",
+  "#FF0000"
+ ],
+ "ItemVulva/ChastityPouch": [
+  "#EE7F8F",
+  "#F5F5F5",
+  "#141414",
+  "#B6B6B6"
+ ],
+ "ItemVulva/FullCasingCage": [
+  "#921732",
+  "#C3C3C3",
+  "#ACACAC"
+ ],
+ "ItemVulva/LatexNulge": [
+  "#8D8D8D"
+ ],
+ "ItemVulva/MysteryBox": [
+  "#700000",
+  "#103E00"
+ ],
+ "ItemVulvaPiercings/VibeEggGlans": [
+  "#323232",
+  "#EFB0F4"
+ ],
+ "ItemVulvaPiercings/CockRingLeash": [
+  "#A2A2A2",
+  "#787878",
+  "#2C2C2C"
+ ],
+ "ItemVulvaPiercings/ModularVulvaPiercings": [
+  "#9F9F9F",
+  "#9F9F9F",
+  "#9F9F9F",
+  "#9F9F9F"
+ ],
+ "ItemButt/Tentacles": [
+  "#c43ba4",
+  "#b832b6",
+  "#9221ba"
+ ],
+ "ItemPelvis/ForbiddenChastityBelt": [
+  "#4FFF00"
+ ],
+ "ItemPelvis/FuturisticChastityBelt": [
+  "#93C48C",
+  "#3B7F2C",
+  "#222222"
+ ],
+ "ItemPelvis/FuturisticTrainingBelt": [
+  "#3B7F2C",
+  "#93C48C",
+  "#93C48C"
+ ],
+ "ItemPelvis/SciFiPleasurePanties": [
+  "#592599",
+  "#202020",
+  "#592599",
+  "#202020",
+  "#7631cc",
+  "#7631cc"
+ ],
+ "ItemPelvis/ObedienceBelt": [
+  "#FF0000",
+  "#004A7F"
+ ],
+ "ItemPelvis/HeavyDutyBelt": [
+  "#FF98EC"
+ ],
+ "ItemPelvis/ModularChastityBelt": [
+  "#CC43C8",
+  "#818181",
+  "#818181",
+  "#818181",
+  "#9A862D",
+  "#BABABA"
+ ],
+ "ItemPelvis/HipHarness": [
+  "#AC8651",
+  "#E0E0E0",
+  "#606060",
+  "#606060",
+  "#606060"
+ ],
+ "ItemPelvis/WaistLegHarness": [
+  "#404040",
+  "#C0C0C0",
+  "#808080",
+  "#404040",
+  "#C0C0C0",
+  "#404040",
+  "#A0A0A0",
+  "#303030",
+  "#C0C0C0",
+  "#303030",
+  "#C0C0C0",
+  "#505050",
+  "#B0B0B0",
+  "#404040",
+  "#B0B0B0",
+  "#FC9EC1",
+  "#404040",
+  "#B0B0B0",
+  "#AEA87D",
+  "#95938A",
+  "#404040",
+  "#AAAAAA",
+  "#A8839D",
+  "#BE92C0"
+ ],
+ "ItemPelvis/FemPelvisHarness": [
+  "#454545",
+  "#909090"
+ ],
+ "ItemTorso/NylonRopeHarness": [
+  "#CCCCCC",
+  "#580000",
+  "#200045",
+  "#200045",
+  "#580000"
+ ],
+ "ItemTorso/HempRopeHarness": [
+  "#956B1C",
+  "#580000",
+  "#200045",
+  "#200045",
+  "#580000"
+ ],
+ "ItemTorso/FuturisticHarness": [
+  "#50913C",
+  "#889FA7"
+ ],
+ "ItemTorso/HighSecurityHarness": [
+  "#444444"
+ ],
+ "ItemTorso/StuddedHarness": [
+  "#343131",
+  "#808080"
+ ],
+ "ItemTorso/HipHarness": [
+  "#AC8651",
+  "#E0E0E0",
+  "#606060",
+  "#606060",
+  "#606060"
+ ],
+ "ItemTorso/RibbonCorset": [
+  "#707070",
+  "#AE9974",
+  "#F56899"
+ ],
+ "ItemTorso/FemPelvisHarness": [
+  "#454545",
+  "#909090"
+ ],
+ "ItemTorso/TightCorset": [
+  "#C7BCB4",
+  "#808080"
+ ],
+ "ItemTorso/SteelBelt": [
+  "#AAB7B9",
+  "#707070",
+  "#AAB7B9",
+  "#AAB7B9",
+  "#A89B80"
+ ],
+ "ItemTorso/BarrelCorset": [
+  "#B0B0B0",
+  "#808080",
+  "#D1C58B",
+  "#827863",
+  "#808080",
+  "#D1C58B",
+  "#827863",
+  "#B0B0B0",
+  "#808080",
+  "#9F966C"
+ ],
+ "ItemTorso/FullBodyStraps": [
+  "#4A4A4A",
+  "#E2C443",
+  "#4A4A4A",
+  "#E2C443"
+ ],
+ "ItemNipples/NippleClamps2": [
+  "#707070",
+  "#000000"
+ ],
+ "ItemBreast/FuturisticBra": [
+  "#50913C",
+  "#FFFFFF",
+  "#889FA7"
+ ],
+ "ItemBreast/FuturisticBra2": [
+  "#50913C",
+  "#889FA7",
+  "#404040"
+ ],
+ "ItemBreast/ForbiddenChastityBra": [
+  "#4FFF00"
+ ],
+ "ItemArms/SturdyLeatherBelts": [
+  "#11161B",
+  "#403E40",
+  "#11161B",
+  "#403E40",
+  "#11161B",
+  "#403E40"
+ ],
+ "ItemArms/ArmbinderJacket": [
+  "#B23E46",
+  "#0A0A0A"
+ ],
+ "ItemArms/LeatherCuffs": [
+  "#2E2E2E"
+ ],
+ "ItemArms/LeatherDeluxeCuffs": [
+  "#612C2C"
+ ],
+ "ItemArms/FuturisticCuffs": [
+  "#40812C",
+  "#707070"
+ ],
+ "ItemArms/FuturisticStraitjacket": [
+  "#528FD1",
+  "#8EADC4",
+  "#A4A4A4",
+  "#93C48C"
+ ],
+ "ItemArms/Bolero": [
+  "#E080A0"
+ ],
+ "ItemArms/BitchSuit": [
+  "#888888",
+  "#9F7316"
+ ],
+ "ItemArms/ShinyStraitjacket": [
+  "#FFFFFF"
+ ],
+ "ItemArms/StraitDress": [
+  "#4040C0"
+ ],
+ "ItemArms/StraitDressOpen": [
+  "#400000"
+ ],
+ "ItemArms/BoxTieArmbinder": [
+  "#222222",
+  "#ffffff"
+ ],
+ "ItemArms/FuturisticArmbinder": [
+  "#40812C",
+  "#555555",
+  "#777777"
+ ],
+ "ItemArms/PrisonLockdownSuit": [
+  "#ab5207"
+ ],
+ "ItemArms/HighSecurityStraitJacket": [
+  "#3e3e3e",
+  "#3e3e3e"
+ ],
+ "ItemArms/StrictLeatherPetCrawler": [
+  "#888888"
+ ],
+ "ItemArms/TransportJacket": [
+  "#801612",
+  "#801612"
+ ],
+ "ItemArms/Tentacles": [
+  "#c43ba4",
+  "#b832b6",
+  "#9221ba"
+ ],
+ "ItemArms/Slime": [
+  "#57ab5e",
+  "#57ab5e",
+  "#57ab5e"
+ ],
+ "ItemArms/PrisonSJ": [
+  "#666666",
+  "#EAEAEA",
+  "#FF1A1A"
+ ],
+ "ItemArms/InflatableDress": [
+  "#C8ADCD",
+  "#C8ADCD",
+  "#C8ADCD",
+  "#909090",
+  "#7F7350"
+ ],
+ "ItemArms/SmoothLeatherArmbinder1": [
+  "#323232",
+  "#565656",
+  "#323232",
+  "#252525",
+  "#252525"
+ ],
+ "ItemArms/ArmbinderSuit": [
+  "#33CCCC",
+  "#BBBBBB",
+  "#A0A0A0",
+  "#A0A0A0",
+  "#33CCCC",
+  "#BBBBBB",
+  "#C09763",
+  "#AAAA80",
+  "#33CCCC",
+  "#C09763",
+  "#AAAA80",
+  "#C09763",
+  "#AAAA80",
+  "#2FB2B2",
+  "#C09763",
+  "#AAAA80",
+  "#33CCCC",
+  "#BBBBBB",
+  "#C09763",
+  "#AAAA80"
+ ],
+ "ItemArms/BedMetalCuffs": [
+  "#999999",
+  "#999999"
+ ],
+ "ItemArms/SteelBelt": [
+  "#AAB7B9",
+  "#707070",
+  "#AAB7B9",
+  "#AAB7B9",
+  "#A89B80"
+ ],
+ "ItemArms/PawPaddedPetsuitArms": [
+  "#161616",
+  "#EDEDED",
+  "#242424",
+  "#960000",
+  "#370000",
+  "#890000",
+  "#2F2F2F"
+ ],
+ "ItemArms/StrappedPetsuitArms": [
+  "#720000",
+  "#202020",
+  "#202020",
+  "#202020"
+ ],
+ "ItemHands/PawMittens": [
+  "#bbbbbb",
+  "#bbbbbb",
+  "#bbbbbb",
+  "#B38295"
+ ],
+ "ItemHands/FuturisticMittens": [
+  "#93C48C",
+  "#3B7F2C"
+ ],
+ "ItemHands/SmoothLeatherMittens1": [
+  "#323232",
+  "#252525"
+ ],
+ "ItemHands/PonyMittensBinder": [
+  "#212121",
+  "#111111",
+  "#9A862D",
+  "#212121"
+ ],
+ "ItemHands/ElbowLengthMittens": [
+  "#1D1D1D",
+  "#E7E7E7",
+  "#DDDDDD",
+  "#CECECE",
+  "#99831A",
+  "#A5A5A5"
+ ],
+ "ItemHands/FullMittens": [
+  "#454545",
+  "#707070",
+  "#8D908F",
+  "#404040",
+  "#AAB2AF"
+ ],
+ "ItemHands/LatexBondageMitts": [
+  "#222222",
+  "#CCCCCC",
+  "#222222",
+  "#CCCCCC",
+  "#CCCCCC",
+  "#FFFF66",
+  "#CCCC33",
+  "#222222",
+  "#CCCCCC",
+  "#222222",
+  "#CCCCCC",
+  "#CCCCCC",
+  "#FFFF66",
+  "#CCCC33"
+ ],
+ "ItemHands/FoamMittens": [
+  "#A9A49A"
+ ],
+ "ItemHands/BalletBootsMittens": [
+  "#CB0C0C",
+  "#DF4949",
+  "#CB0C0C",
+  "#DF4949",
+  "#918760"
+ ],
+ "ItemHandheld/Diaper": [
+  "#8D8D8D"
+ ],
+ "ItemHandheld/BabyPowder": [
+  "#937C96",
+  "#B55CC1"
+ ],
+ "ItemHandheld/Wipes": [
+  "#73949A",
+  "#9CA5A7",
+  "#011418"
+ ],
+ "ItemHandheld/Mug": [
+  "#9A9694",
+  "#3E170B"
+ ],
+ "ItemHandheld/Shark": [
+  "#F0F3F5",
+  "#567890",
+  "#BF5249",
+  "#8E6565"
+ ],
+ "ItemHandheld/BunPlush": [
+  "#848484",
+  "#C26969"
+ ],
+ "ItemHandheld/FoxPlush": [
+  "#B65D1F",
+  "#979797"
+ ],
+ "ItemHandheld/Karl": [
+  "#8F6154"
+ ],
+ "ItemHandheld/PetPotato": [
+  "#AA8554"
+ ],
+ "ItemHandheld/Smartphone": [
+  "#133769",
+  "#900000"
+ ],
+ "ItemHandheld/AnimeGirlWand": [
+  "#B7B056",
+  "#808080",
+  "#828686",
+  "#D36DB1",
+  "#828686",
+  "#DD5B9F",
+  "#C6C25B"
+ ],
+ "ItemHandheld/Kyosensu": [
+  "#8F8674",
+  "#A24949",
+  "#404040"
+ ],
+ "ItemHandheld/Uchiwa": [
+  "#8F8674",
+  "#D9C07E",
+  "#696763"
+ ],
+ "ItemHandheld/Cigarette": [
+  "#A16000"
+ ],
+ "ItemHandheld/GiftBox": [
+  "#09440A",
+  "#FFFFFF",
+  "#6C0E11",
+  "#FFFFFF"
+ ],
+ "ItemHandheld/DragonPlush": [
+  "#141414",
+  "#660000",
+  "#925900",
+  "#4CFF00",
+  "#875301",
+  "#ffed00"
+ ],
+ "ItemHandheld/ElectricGuitar": [
+  "#202020",
+  "#333333"
+ ],
+ "ItemHandheld/R18Baton": [
+  "#000000"
+ ],
+ "ItemHandheld/CandyCane": [
+  "#969696",
+  "#A30000"
+ ],
+ "ItemHandheld/Foldingfan": [
+  "#FFFFFF",
+  "#0C0809",
+  "#2B1D11",
+  "#2B1D11",
+  "#2B1D11",
+  "#848484"
+ ],
+ "ItemHandheld/Oilpaperumbrella": [
+  "#776451",
+  "#776451",
+  "#C3C0BA"
+ ],
+ "ItemNeck/LeatherCollar": [
+  "#000000"
+ ],
+ "ItemNeck/PetSuitShockCollar": [
+  "#2C2C2C"
+ ],
+ "ItemNeck/PostureCollar": [
+  "#000000"
+ ],
+ "ItemNeck/FuturisticCollar": [
+  "#40812C"
+ ],
+ "ItemNeck/LeatherChoker": [
+  "#000000"
+ ],
+ "ItemNeck/LeatherDeluxeCollar": [
+  "#612C2C"
+ ],
+ "ItemNeck/MaidCollar": [
+  "#DCDCDC",
+  "#2C2C2C"
+ ],
+ "ItemNeck/HeartLinkChoker": [
+  "#979797",
+  "#3D3D3D"
+ ],
+ "ItemNeck/GothicCollar": [
+  "#202020"
+ ],
+ "ItemNeck/TechnoCollar": [
+  "#959595",
+  "#3976AE"
+ ],
+ "ItemNeck/ComboHarness": [
+  "#4D4848",
+  "#7E7B77",
+  "#FFFFFF",
+  "#ACA1A1"
+ ],
+ "ItemNeck/BonedNeckCorset": [
+  "#222222",
+  "#888888",
+  "#AA2121",
+  "#AA2121",
+  "#888888"
+ ],
+ "ItemNeck/LatexRingCollar": [
+  "#2E2E2E",
+  "#2C208B",
+  "#141414",
+  "#B47E2C"
+ ],
+ "ItemNeck/SpikedChoker": [
+  "#2E2E2E",
+  "#BABABA"
+ ],
+ "ItemNeck/PaddedBeltCollar": [
+  "#610C8D",
+  "#312C48",
+  "#B7B6B6",
+  "#0F0F0F",
+  "#710808",
+  "#C2A218"
+ ],
+ "ItemNeck/MoonCollar": [
+  "#7E7E7E",
+  "#961006",
+  "#198E9D"
+ ],
+ "ItemNeck/SunCollar": [
+  "#7E7E7E",
+  "#198E9D",
+  "#961006"
+ ],
+ "ItemNeck/AsylumCollar": [
+  "#BFBFB1",
+  "#95866D",
+  "#808080",
+  "#877C66"
+ ],
+ "ItemNeck/ChainCollar": [
+  "#908463",
+  "#975757",
+  "#908463"
+ ],
+ "ItemNeck/SteampunkCollar": [
+  "#707070",
+  "#999999",
+  "#C3B079",
+  "#909090",
+  "#707070",
+  "#858585",
+  "#C0C0C0"
+ ],
+ "ItemNeck/SSpikedCollar": [
+  "#959595",
+  "#C3B079"
+ ],
+ "ItemNeck/RibbonCollar": [
+  "#FF0000",
+  "#FF0000",
+  "#FF0000",
+  "#D4AF37"
+ ],
+ "ItemNeckAccessories/CustomCollarTag": [
+  "#aaa366",
+  "#000000"
+ ],
+ "ItemNeckAccessories/ElectronicTag": [
+  "#40812C",
+  "#000000"
+ ],
+ "ItemNeckAccessories/CollarRoseAmulet": [
+  "#8F8B69",
+  "#691919"
+ ],
+ "ItemNeckRestraints/PetPost": [
+  "#845343",
+  "#A1794A",
+  "#237D22",
+  "#F3F3F3",
+  "#F3F3F3",
+  "#FFF483",
+  "#FFBCD6"
+ ],
+ "ItemNeckRestraints/MCuffCollar": [
+  "#A0A0A0",
+  "#909090",
+  "#909090",
+  "#A0A0A0",
+  "#9F8937"
+ ],
+ "ItemMouth/WiffleGag": [
+  "#FF6060"
+ ],
+ "ItemMouth/HarnessBallGag": [
+  "#FF6060"
+ ],
+ "ItemMouth/Ball": [
+  "#E1D31C"
+ ],
+ "ItemMouth/PacifierClip": [
+  "#B76290",
+  "#CB6A9E"
+ ],
+ "ItemMouth/KittyGag": [
+  "#FFFFFF",
+  "#000000",
+  "#E496E7"
+ ],
+ "ItemMouth/KittyHarnessPanelGag": [
+  "#FFFFFF",
+  "#FFFFFF",
+  "#000000",
+  "#E496E7"
+ ],
+ "ItemMouth/KittyMuzzleGag": [
+  "#FFFFFF",
+  "#FFFFFF",
+  "#000000",
+  "#E496E7"
+ ],
+ "ItemMouth/FuturisticPanelGag": [
+  "#50913C"
+ ],
+ "ItemMouth/FuturisticHarnessPanelGag": [
+  "#50913C"
+ ],
+ "ItemMouth/FuturisticHarnessBallGag": [
+  "#50913C"
+ ],
+ "ItemMouth/DildoGag": [
+  "#404040"
+ ],
+ "ItemMouth/BambooGag": [
+  "#A07858"
+ ],
+ "ItemMouth/PumpkinHarnessGag": [
+  "#181818"
+ ],
+ "ItemMouth/LipGag": [
+  "#cc3333"
+ ],
+ "ItemMouth/PrisonLockdownGag": [
+  "#8c4309"
+ ],
+ "ItemMouth/ShoeGag": [
+  "#000000"
+ ],
+ "ItemMouth/OTNPlugGag": [
+  "#665D5D",
+  "#514D57",
+  "#979595"
+ ],
+ "ItemMouth/PonyGag": [
+  "#383838",
+  "#B24031",
+  "#B24031",
+  "#EAEAEA",
+  "#FF95DB",
+  "#383838",
+  "#383838",
+  "#956B1C",
+  "#8A7055",
+  "#8A7055"
+ ],
+ "ItemMouth/LatexSheathGag": [
+  "#CC2222",
+  "#CC2222"
+ ],
+ "ItemMouth/Slime": [
+  "#57ab5e"
+ ],
+ "ItemMouth/LatexMuzzleMask": [
+  "#141414",
+  "#141414",
+  "#262626",
+  "#8B8B8B"
+ ],
+ "ItemMouth/ModularGag": [
+  "#B0B0B0",
+  "#212121",
+  "#A00000",
+  "#9A862D"
+ ],
+ "ItemMouth/TonguePiercingGag": [
+  "#1B1B1B",
+  "#747474",
+  "#1B1B1B",
+  "#4DD6D9",
+  "#CC981B",
+  "#D0B145",
+  "#CC981B",
+  "#A2A2A2",
+  "#BBA34E",
+  "#DBCE5C",
+  "#8F8F8F"
+ ],
+ "ItemMouth/Stitches": [
+  "#3f3c3a"
+ ],
+ "ItemMouth/PaddedFaceMask": [
+  "#EEEEEE",
+  "#222222",
+  "#FF59B5"
+ ],
+ "ItemMouth/MouthFeatureGag": [
+  "#222222",
+  "#444444",
+  "#CC2222",
+  "#CC2222"
+ ],
+ "ItemMouth/LatexRespirator": [
+  "#333333",
+  "#222222",
+  "#CCCCCC",
+  "#222222",
+  "#CCCCCC",
+  "#37E21D"
+ ],
+ "ItemMouth/QualityHarnessGag": [
+  "#8E0000",
+  "#121212",
+  "#242424",
+  "#D7D7D7"
+ ],
+ "ItemMouth/GenitalGag": [
+  "#202020",
+  "#505050"
+ ],
+ "ItemMouth/PremiumMuzzle": [
+  "#7E0000",
+  "#950000",
+  "#AFAFAF",
+  "#1B1B1B",
+  "#D3D3D3",
+  "#6C0B0B",
+  "#7B1D1D"
+ ],
+ "ItemMouth/OverfilledGag": [
+  "#890000",
+  "#B41414",
+  "#929292"
+ ],
+ "ItemMouth/XmasStickerGag": [
+  "#CF5472",
+  "#7A7A7A",
+  "#659E43"
+ ],
+ "ItemMouth/AOMGag": [
+  "#D27BEB",
+  "#505050",
+  "#C0C0C0",
+  "#877C66"
+ ],
+ "ItemMouth/HorrorMuzzle": [
+  "#707070",
+  "#858585"
+ ],
+ "ItemMouth/AsylumMuzzle": [
+  "#BFBFB1",
+  "#95866D",
+  "#A0A0A0",
+  "#877C66"
+ ],
+ "ItemMouth/Cigarette": [
+  "#A16000"
+ ],
+ "ItemMouth/CompGag": [
+  "#49AB8D",
+  "#88847C",
+  "#979179",
+  "#909090",
+  "#707070",
+  "#7A7A7A",
+  "#858585",
+  "#88847C"
+ ],
+ "ItemMouth/RoseBallGag": [
+  "#960000",
+  "#AFAC69",
+  "#202020"
+ ],
+ "ItemMouth/BishopGag": [
+  "#6C2323",
+  "#8F8F8F",
+  "#202020",
+  "#202020"
+ ],
+ "ItemMouth/BallGag2": [
+  "#2E2E2E",
+  "#862828"
+ ],
+ "ItemMouth/ShapedMouthCage": [
+  "#DADADA",
+  "#191919"
+ ],
+ "ItemMouth2/WiffleGag": [
+  "#FF6060"
+ ],
+ "ItemMouth2/HarnessBallGag": [
+  "#FF6060"
+ ],
+ "ItemMouth2/KittyGag": [
+  "#FFFFFF",
+  "#000000",
+  "#E496E7"
+ ],
+ "ItemMouth2/KittyHarnessPanelGag": [
+  "#FFFFFF",
+  "#FFFFFF",
+  "#000000",
+  "#E496E7"
+ ],
+ "ItemMouth2/KittyMuzzleGag": [
+  "#FFFFFF",
+  "#FFFFFF",
+  "#000000",
+  "#E496E7"
+ ],
+ "ItemMouth2/DildoGag": [
+  "#404040"
+ ],
+ "ItemMouth2/LipGag": [
+  "#cc3333"
+ ],
+ "ItemMouth2/PrisonLockdownGag": [
+  "#8c4309"
+ ],
+ "ItemMouth2/ShoeGag": [
+  "#000000"
+ ],
+ "ItemMouth2/FuturisticHarnessPanelGag": [
+  "#50913C"
+ ],
+ "ItemMouth2/FuturisticPanelGag": [
+  "#50913C"
+ ],
+ "ItemMouth2/FuturisticHarnessBallGag": [
+  "#50913C"
+ ],
+ "ItemMouth2/PonyGag": [
+  "#383838",
+  "#B24031",
+  "#B24031",
+  "#EAEAEA",
+  "#FF95DB",
+  "#383838",
+  "#383838",
+  "#956B1C",
+  "#8A7055",
+  "#8A7055"
+ ],
+ "ItemMouth2/Slime": [
+  "#57ab5e"
+ ],
+ "ItemMouth2/LatexMuzzleMask": [
+  "#141414",
+  "#141414",
+  "#262626",
+  "#8B8B8B"
+ ],
+ "ItemMouth2/ModularGag": [
+  "#B0B0B0",
+  "#212121",
+  "#A00000",
+  "#9A862D"
+ ],
+ "ItemMouth3/WiffleGag": [
+  "#FF6060"
+ ],
+ "ItemMouth3/HarnessBallGag": [
+  "#FF6060"
+ ],
+ "ItemMouth3/KittyGag": [
+  "#FFFFFF",
+  "#000000",
+  "#E496E7"
+ ],
+ "ItemMouth3/KittyHarnessPanelGag": [
+  "#FFFFFF",
+  "#FFFFFF",
+  "#000000",
+  "#E496E7"
+ ],
+ "ItemMouth3/KittyMuzzleGag": [
+  "#FFFFFF",
+  "#FFFFFF",
+  "#000000",
+  "#E496E7"
+ ],
+ "ItemMouth3/DildoGag": [
+  "#404040"
+ ],
+ "ItemMouth3/LipGag": [
+  "#cc3333"
+ ],
+ "ItemMouth3/PrisonLockdownGag": [
+  "#8c4309"
+ ],
+ "ItemMouth3/ShoeGag": [
+  "#000000"
+ ],
+ "ItemMouth3/PonyGag": [
+  "#383838",
+  "#B24031",
+  "#B24031",
+  "#EAEAEA",
+  "#FF95DB",
+  "#383838",
+  "#383838",
+  "#956B1C",
+  "#8A7055",
+  "#8A7055"
+ ],
+ "ItemMouth3/Slime": [
+  "#57ab5e"
+ ],
+ "ItemMouth3/LatexMuzzleMask": [
+  "#141414",
+  "#141414",
+  "#262626",
+  "#8B8B8B"
+ ],
+ "ItemMouth3/ModularGag": [
+  "#B0B0B0",
+  "#212121",
+  "#A00000",
+  "#9A862D"
+ ],
+ "ItemMouth3/FuturisticHarnessPanelGag": [
+  "#50913C"
+ ],
+ "ItemMouth3/FuturisticPanelGag": [
+  "#50913C"
+ ],
+ "ItemMouth3/FuturisticHarnessBallGag": [
+  "#50913C"
+ ],
+ "ItemMouth3/XmasStickerGag": [
+  "#CF5472",
+  "#7A7A7A",
+  "#659E43"
+ ],
+ "ItemMouth3/HorrorMuzzle": [
+  "#707070",
+  "#858585"
+ ],
+ "ItemMouth3/AsylumMuzzle": [
+  "#BFBFB1",
+  "#95866D",
+  "#A0A0A0",
+  "#877C66"
+ ],
+ "ItemHead/PaddedBlindfold": [
+  "#545454",
+  "#808080"
+ ],
+ "ItemHead/FuturisticMask": [
+  "#4040CB",
+  "#FFFFFF",
+  "#FFFFFF"
+ ],
+ "ItemHead/HypnoticVisor": [
+  "#790BFF",
+  "#808080",
+  "#5B23D9",
+  "#100024",
+  "#808080",
+  "#E6E6E6"
+ ],
+ "ItemHead/KittyBlindfold": [
+  "#FFFFFF",
+  "#000000",
+  "#E48FE9"
+ ],
+ "ItemHead/AnimeLenses": [
+  "#98FFE6",
+  "#98FFE6"
+ ],
+ "ItemHead/MedicalPatch": [
+  "#ECC7A1",
+  "#ECC7A1",
+  "#B459A6",
+  "#B459A6"
+ ],
+ "ItemHead/DroneMask": [
+  "#222222",
+  "#CCCCCC",
+  "#7F7F7F",
+  "#00F4FD",
+  "#E700CA"
+ ],
+ "ItemHead/Slime": [
+  "#57ab5e"
+ ],
+ "ItemHead/Stitches": [
+  "#3f3c3a",
+  "#3f3c3a"
+ ],
+ "ItemHead/Kigu2Hood": [
+  "#707070",
+  "#404040",
+  "#404040",
+  "#E14055",
+  "#606060"
+ ],
+ "ItemHead/AsylumBlindfold": [
+  "#BFBFB1",
+  "#95866D",
+  "#A0A0A0",
+  "#877C66"
+ ],
+ "ItemNose/NoseClip": [
+  "#9B9685",
+  "#909090",
+  "#D62F2F"
+ ],
+ "ItemHood/CybertechMask": [
+  "#242424",
+  "#333333",
+  "#472418",
+  "#C0C0C0",
+  "#363636",
+  "#151515",
+  "#494949",
+  "#333333",
+  "#0E0E0E",
+  "#9A9A9A",
+  "#F200FF",
+  "#780E7E",
+  "#A1A1A1",
+  "#363636",
+  "#6490C6"
+ ],
+ "ItemHood/KirugumiMask": [
+  "#9A7F76"
+ ],
+ "ItemHood/LatexHoodOpenHair": [
+  "#555555"
+ ],
+ "ItemHood/LeatherHood": [
+  "#404040",
+  "#404040"
+ ],
+ "ItemHood/CanvasHood": [
+  "#a5a095",
+  "#ce7210"
+ ],
+ "ItemHood/TechnoHelmet1": [
+  "#1E7484",
+  "#2F2F2F",
+  "#999999",
+  "#246489"
+ ],
+ "ItemHood/FuturisticHelmet": [
+  "#40812C"
+ ],
+ "ItemHood/GGTSHelmet": [
+  "#40812C"
+ ],
+ "ItemHood/LampHeadHood": [
+  "#a13f75",
+  "#ad4c81"
+ ],
+ "ItemHood/Slime": [
+  "#57ab5e",
+  "#57ab5e"
+ ],
+ "ItemHood/KittyHood": [
+  "#2D8736",
+  "#000000"
+ ],
+ "ItemHood/DroneMask": [
+  "#222222",
+  "#CCCCCC",
+  "#7F7F7F",
+  "#00F4FD",
+  "#E700CA"
+ ],
+ "ItemHood/CustomLatexHood": [
+  "#1C1C1C",
+  "#888888",
+  "#1C1C1C",
+  "#1C1C1C",
+  "#1C1C1C",
+  "#1C1C1C",
+  "#B7B7B7",
+  "#B7B7B7",
+  "#B7B7B7",
+  "#1C1C1C",
+  "#B7B7B7"
+ ],
+ "ItemHood/HarnessCatMask": [
+  "#202020",
+  "#202020",
+  "#ADADAD"
+ ],
+ "ItemHood/InflatableGagMask": [
+  "#777777",
+  "#BDBDBD",
+  "#1A1A1A"
+ ],
+ "ItemHood/RubberMask": [
+  "#A28E8C",
+  "#EBB2B2",
+  "#A28E8C",
+  "#D6ABA8",
+  "#915A54",
+  "#6B77C3",
+  "#FC8D8D",
+  "#B26D66",
+  "#B26D66",
+  "#AAAA80",
+  "#707070",
+  "#E0A86B"
+ ],
+ "ItemHood/CustomBallHood": [
+  "#222222",
+  "#CCCCCC",
+  "#EF870C",
+  "#CCCCCC",
+  "#F9EC0C",
+  "#CCCCCC"
+ ],
+ "ItemHood/Balloon": [
+  "#C95A68",
+  "#CD6F7B",
+  "#E0E0E0"
+ ],
+ "ItemHood/Kigu2Hood": [
+  "#707070",
+  "#404040",
+  "#404040",
+  "#E14055",
+  "#606060"
+ ],
+ "ItemHood/CreepyIronMask": [
+  "#808D90",
+  "#819F9F",
+  "#8E8D89",
+  "#808D90",
+  "#877C66"
+ ],
+ "ItemHood/HalloIII": [
+  "#656565",
+  "#606060",
+  "#808080",
+  "#404040",
+  "#877C66"
+ ],
+ "ItemHood/TransparentLatexHood": [
+  "#5F523C",
+  "#827558"
+ ],
+ "ItemEars/FuturisticEarphones": [
+  "#50913C"
+ ],
+ "ItemEars/CTHeadset": [
+  "#9000C9",
+  "#262626",
+  "#E7E7E7",
+  "#E7E7E7",
+  "#6F6F6F",
+  "#E7E7E7",
+  "#E7E7E7",
+  "#F200FF"
+ ],
+ "ItemMisc/PetPost": [
+  "#237D22",
+  "#F3F3F3",
+  "#F3F3F3",
+  "#FFF483",
+  "#FFBCD6"
+ ],
+ "ItemMisc/BunPlush": [
+  "#848484",
+  "#C26969"
+ ],
+ "ItemMisc/FoxPlush": [
+  "#B65D1F",
+  "#979797"
+ ],
+ "ItemMisc/Karl": [
+  "#8F6154"
+ ],
+ "ItemMisc/PetPotato": [
+  "#AA8554"
+ ],
+ "ItemDevices/WetFloor": [
+  "#fdc800",
+  "#000000"
+ ],
+ "ItemDevices/LeatherCage": [
+  "#404040",
+  "#909090",
+  "#707070",
+  "#909090",
+  "#808080",
+  "#877C66"
+ ],
+ "ItemDevices/Potty": [
+  "#BB8896",
+  "#8C8C8C"
+ ],
+ "ItemDevices/FuturisticCrate": [
+  "#222222",
+  "#444444",
+  "#FF1199",
+  "#444444",
+  "#555555",
+  "#3B7F2C",
+  "#BBBBFF"
+ ],
+ "ItemDevices/DollBox": [
+  "#530E50",
+  "#DD2BD5",
+  "#A0A0A0",
+  "#D8D8D8",
+  "#854DA5",
+  "#9EDDFA"
+ ],
+ "ItemDevices/VacBedDeluxe": [
+  "#808080",
+  "#808080",
+  "#808080"
+ ],
+ "ItemDevices/Enema": [
+  "#989898",
+  "#646464",
+  "#669DB5"
+ ],
+ "ItemDevices/Bed": [
+  "#523629",
+  "#888990",
+  "#808284"
+ ],
+ "ItemDevices/Kennel": [
+  "#2E2E29",
+  "#780E0E",
+  "#2E2E29",
+  "#2E2E29"
+ ],
+ "ItemDevices/Stroller": [
+  "#2B2B2B",
+  "#191718",
+  "#8B8589",
+  "#343233",
+  "#474244",
+  "#968692",
+  "#4C445D"
+ ],
+ "ItemDevices/PetBowl": [
+  "#000000"
+ ],
+ "ItemDevices/Snowman": [
+  "#974338"
+ ],
+ "ItemDevices/MedicalBed": [
+  "#909090",
+  "#75B2C8",
+  "#808284"
+ ],
+ "ItemDevices/WoodenRack": [
+  "#866949",
+  "#875D37",
+  "#63605F",
+  "#372D24",
+  "#BB895D",
+  "#875D37",
+  "#875D37"
+ ],
+ "ItemDevices/LuckyWheel": [
+  "#7F4141",
+  "#881818",
+  "#FFA8DD",
+  "#2C2C2C",
+  "#7B3D9E",
+  "#FF3F3F",
+  "#343434",
+  "#F2F2F2",
+  "#D43434",
+  "#C2B556",
+  "#81DA88",
+  "#E18DC3"
+ ],
+ "ItemDevices/WheelFortune": [
+  "#7F4141",
+  "#881818",
+  "#FFA8DD",
+  "#2C2C2C",
+  "#7B3D9E",
+  "#FF3F3F",
+  "#343434",
+  "#F2F2F2",
+  "#D43434",
+  "#C2B556",
+  "#81DA88",
+  "#E18DC3"
+ ],
+ "ItemDevices/FoldingScreen": [
+  "#B7A5A5",
+  "#A5112C",
+  "#616060"
+ ],
+ "ItemDevices/KabeshiriWall": [
+  "#474854",
+  "#82827C",
+  "#FF0000",
+  "#6F719B",
+  "#6F719B"
+ ],
+ "ItemDevices/Cement": [
+  "#242F70",
+  "#94A2A3",
+  "#C6B86F",
+  "#707070"
+ ],
+ "ItemDevices/BrickWall": [
+  "#5A3F26",
+  "#707070",
+  "#7E5332",
+  "#6E472A",
+  "#707070"
+ ],
+ "ItemDevices/PogoBall": [
+  "#303030",
+  "#404040",
+  "#202020"
+ ],
+ "ItemDevices/ExclusiveWaitress": [
+  "#7A808F",
+  "#4CB652",
+  "#64E267",
+  "#9A8F79",
+  "#D6CBC1"
+ ],
+ "ItemDevices/Highchair": [
+  "#676285",
+  "#848484",
+  "#4a468d",
+  "#939394",
+  "#987686",
+  "#987686",
+  "#5FB25A",
+  "#9B934C",
+  "#C59C69",
+  "#CAA07D",
+  "#7E7E7E",
+  "#7B7B7B",
+  "#6787AF",
+  "#78ABA1",
+  "#B58E4F"
+ ],
+ "ItemDevices/SingleBalletBoot": [
+  "#353535",
+  "#656565",
+  "#505050",
+  "#A9A49A",
+  "#353535",
+  "#A19373",
+  "#909090",
+  "#908166",
+  "#82774F"
+ ],
+ "ItemDevices/GiftBox": [
+  "#09440A",
+  "#FFFFFF",
+  "#6C0E11",
+  "#FFFFFF",
+  "#643D73",
+  "#FFFFFF",
+  "#09440A",
+  "#FFFFFF",
+  "#6C0E11",
+  "#FFFFFF",
+  "#643D73",
+  "#FFFFFF",
+  "#09440A",
+  "#FFFFFF",
+  "#6C0E11",
+  "#FFFFFF",
+  "#643D73",
+  "#FFFFFF"
+ ],
+ "ItemDevices/InflatableRestraintBag": [
+  "#000000",
+  "#000000",
+  "#000000",
+  "#444444",
+  "#000000"
+ ],
+ "ItemAddon/Covers": [
+  "#99A2AB"
+ ],
+ "ItemAddon/CeilingNeckCuff": [
+  "#757575",
+  "#877C66"
+ ],
+ "ItemBoots/FuturisticHeels": [
+  "#50913C"
+ ],
+ "ItemBoots/FuturisticHeels2": [
+  "#50913C",
+  "#aaaaaa"
+ ],
+ "ItemBoots/Slime": [
+  "#57ab5e",
+  "#57ab5e"
+ ],
+ "ItemBoots/MonoHeel": [
+  "#2c2c2c"
+ ],
+ "ItemBoots/StrictPonyBoots": [
+  "#0B0B0B",
+  "#0B0B0B",
+  "#760000",
+  "#0B0B0B",
+  "#000000"
+ ],
+ "ItemBoots/BalletMittens": [
+  "#505050",
+  "#606060",
+  "#404040",
+  "#404040",
+  "#606060",
+  "#404040"
+ ],
+ "ItemBoots/HeellessHoof": [
+  "#454545",
+  "#877C66",
+  "#909090",
+  "#707070"
+ ],
+ "ItemBoots/HoofBoots": [
+  "#413A2B",
+  "#252525",
+  "#A18F55",
+  "#877C66"
+ ],
+ "ItemBoots/ZipperBBoots": [
+  "#252525",
+  "#505050"
+ ],
+ "ItemBoots/SingleBalletBoot": [
+  "#353535",
+  "#656565",
+  "#505050",
+  "#A9A49A",
+  "#353535",
+  "#A19373",
+  "#909090",
+  "#908166",
+  "#82774F"
+ ]
+}

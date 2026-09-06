@@ -47,6 +47,22 @@ const catalog: Catalog = JSON.parse(fs.readFileSync(CATALOG_PATH, "utf-8"));
 const activityByName = new Map(catalog.activities.map((a) => [a.name, a]));
 const itemIndex = new Map(catalog.items.map((i) => [`${i.group}/${i.name}`, i]));
 
+// #76 资产默认色表（Group/Name → hex[]）：BC 服务器对"颜色=资产默认色"的道具会剥离 Color 字段
+// （Scripts_Server.js:770 ItemColorIsDefault → outputColor=undefined），所以缓存里 Color=undefined
+// 的道具要回查此表才知道默认色。由 scripts/extract-default-colors.mjs 从官方资产文件生成。
+const DEFAULT_COLOR_PATH = path.resolve(__dirname, "..", "data", "asset-default-colors.json");
+const defaultColorIndex = new Map<string, string>(
+  Object.entries(JSON.parse(fs.readFileSync(DEFAULT_COLOR_PATH, "utf-8")) as Record<string, string[]>)
+    .map(([k, hexes]) => [k, hexes[0]] as const)
+);
+
+// #76 人工修正表（Group/Name → 色名）：官方 DefaultColor 只有"贴图原色"层（无 hex）的资产，
+// 自动提取拿不到主体色（如旗袍只剩边缘层灰色 hex）——实机确认过的真实主色写在这里覆盖。
+// 2026-09-06 用户实机确认：Cloth/ChineseDress2 主体红色（官方表只剩边缘层 #858585 会误报"灰旗袍"）。
+const MANUAL_COLOR_OVERRIDE: Record<string, string> = {
+  "Cloth/ChineseDress2": "红",
+};
+
 // ---------------------------------------------------------------------------
 // 部位（zone）中文名
 // ---------------------------------------------------------------------------
@@ -1602,6 +1618,99 @@ export interface AppearanceEntry {
   [key: string]: unknown;
 }
 
+// ---------------------------------------------------------------------------
+// #76 造型师视角：颜色识别（hex → 中文色名）+ 衣着中文化
+// 审美 = 信息（颜色/款式，数据里全有）× 品味知识（LLM 自带）× 完整描述（本段补齐）。
+// 视觉能力对 BC 是降级：画面只是数据的渲染翻译，BOT 直读数据本就是人类视觉超集。
+// ---------------------------------------------------------------------------
+
+/** 常用色板（RGB）——审美点评只需粗粒度色名，够用且省 token */
+const COLOR_PALETTE: Array<[string, number, number, number]> = [
+  ["黑", 20, 20, 20], ["白", 245, 245, 245], ["灰", 130, 130, 130],
+  ["红", 200, 30, 40], ["深红", 110, 15, 30], ["粉", 250, 145, 185],
+  ["橙", 240, 130, 30], ["棕", 130, 80, 40], ["黄", 240, 210, 60],
+  ["金", 205, 165, 60], ["绿", 60, 150, 70], ["青", 40, 180, 180],
+  ["蓝", 50, 90, 200], ["藏青", 30, 45, 100], ["紫", 130, 60, 180],
+];
+
+/** 单个 hex（#RRGGBB 或 #RRGGBBAA）→ 最近色名；非 hex（如 "Default"）返回 null */
+function hexToColorName(hex: string): string | null {
+  const m = /^#?([0-9a-f]{6})/i.exec(hex.trim());
+  if (!m) return null;
+  const r = parseInt(m[1].slice(0, 2), 16);
+  const g = parseInt(m[1].slice(2, 4), 16);
+  const b = parseInt(m[1].slice(4, 6), 16);
+  let best: string | null = null;
+  let bestDist = Number.MAX_SAFE_INTEGER;
+  for (const [name, pr, pg, pb] of COLOR_PALETTE) {
+    const d = (r - pr) ** 2 + (g - pg) ** 2 + (b - pb) ** 2;
+    if (d < bestDist) {
+      bestDist = d;
+      best = name;
+    }
+  }
+  return best;
+}
+
+/** 从 Color 字段（string | string[]，服装常为分层色数组）提取主色名；识别不出返回 null */
+function dominantColorName(color: unknown): string | null {
+  const candidates: string[] = [];
+  if (typeof color === "string") candidates.push(color);
+  else if (Array.isArray(color)) {
+    for (const c of color) if (typeof c === "string") candidates.push(c);
+  }
+  for (const c of candidates) {
+    const name = hexToColorName(c);
+    if (name) return name;
+  }
+  return null;
+}
+
+/** 道具主色名（#76）：wire Color 优先；无 Color（服务器剥离的默认色）依次查人工修正表、资产默认色表 */
+function colorNameOfEntry(e: AppearanceEntry): string | null {
+  const direct = dominantColorName((e as AppearanceEntry & { Color?: unknown }).Color);
+  if (direct) return direct;
+  if (typeof e.Group === "string" && typeof e.Name === "string") {
+    const key = `${e.Group}/${e.Name}`;
+    const manual = MANUAL_COLOR_OVERRIDE[key];
+    if (manual) return manual;
+    const defHex = defaultColorIndex.get(key);
+    if (defHex) return hexToColorName(defHex);
+  }
+  return null;
+}
+
+/** 衣着槽位白名单（可被 LLM 点评搭配的穿着层；身体特征/表情类一律跳过） */
+const OUTFIT_GROUPS = new Set([
+  "Cloth", "ClothLower", "ClothAccessory", "Suit", "SuitLower", "Bra", "Corset",
+  "Panties", "Socks", "SocksLeft", "SocksRight", "Shoes", "ShoesLeft", "ShoesRight",
+  "Gloves", "Hat", "Mask", "Hood", "Tail", "Wings", "Necklace", "Bracelets",
+  "AnkletLeft", "AnkletRight", "HandAccessoryLeft", "HandAccessoryRight",
+]);
+
+/** 衣着描述（造型师视角）：白名单槽位 → 中文名 + 颜色，如"紫色旗袍、黑色高跟鞋" */
+function describeOutfit(appearance: unknown[]): string {
+  const parts: string[] = [];
+  for (const raw of appearance) {
+    const e = raw as AppearanceEntry & { Color?: unknown };
+    if (typeof e?.Group !== "string" || typeof e?.Name !== "string") continue;
+    if (!e.Name || e.Name === "none") continue;
+    if (!OUTFIT_GROUPS.has(e.Group)) continue;
+    const item = itemIndex.get(`${e.Group}/${e.Name}`);
+    const cn = item?.cn;
+    if (!cn) continue; // 无中文名的衣着不入描述（避免英文噪音）
+    const color = colorNameOfEntry(e);
+    // TODO(#76-debug): 临时诊断——保留一轮验证默认色表回查生效后仍有识别失败的残留
+    if (!color) {
+      console.log(
+        `[outfit-color-diag] ${e.Group}/${e.Name} 颜色识别失败（含默认色表回查），Color 原始值: ${JSON.stringify(e.Color)}`
+      );
+    }
+    parts.push(color ? `${color}${cn}` : cn);
+  }
+  return parts.join("、");
+}
+
 /** 谎言高发槽位（反相锚点，2026-09-04 21:00）：这些部位没道具时在摘要里显式标注"没有"，
  * 防 LLM 顺着她的谎言编造（实测 服务对象"下面的玩具太刺激了"——身上根本没戴，LLM 却接"原来是下面的小玩具在闹你"） */
 const NOTABLE_ABSENT_ZONES: Array<{ groups: string[]; label: string }> = [
@@ -1687,13 +1796,21 @@ export function summarizeAppearance(appearance: unknown[] | null | undefined): s
       else if (prop.Intensity === 1) vibeInfo = "，中高档震动中";
       else vibeInfo = "，最高档震动中";
     }
-    lines.push(`${zoneCN(e.Group)}：${cn}${variantCN ? `【${variantCN}】` : ""}${tightness}${lockInfo}${vibeInfo}`);
+    // #76 造型师视角：束缚道具也带主色（"红色牵引绳"）——LLM 点评搭配的素材
+    // （wire Color 缺失时回查资产默认色表，同衣着段）
+    const colorCN = colorNameOfEntry(e);
+    lines.push(
+      `${zoneCN(e.Group)}：${colorCN ? `${colorCN}${cn}` : cn}${variantCN ? `【${variantCN}】` : ""}${tightness}${lockInfo}${vibeInfo}`
+    );
   }
   if (lines.length === 0) lines.push("身上没有任何束缚道具");
   // 反相锚点：谎言高发部位没道具时显式说"没有"——LLM 看得到"缺席"，才不会顺着她的谎言幻觉
   for (const zone of NOTABLE_ABSENT_ZONES) {
     if (!hasItemInGroups(appearance, zone.groups)) lines.push(zone.label);
   }
+  // #76 衣着段（造型师视角）：旗袍/丝袜/高跟鞋等穿着层的"颜色+中文名"清单
+  const outfit = describeOutfit(appearance as unknown[]);
+  if (outfit) lines.push(`衣着：${outfit}`);
   return lines.join("、");
 }
 
