@@ -1,0 +1,29 @@
+# 依赖与编译产物（可重建）
+node_modules/
+dist/
+
+# 账号密码与 API key（绝不提交）
+.env
+
+# BC 官方源码镜像（版权材料，不可分发）
+.reference/
+
+# 运行日志（含聊天记录，隐私）
+*.log
+logs/
+
+# WorkBuddy 平台工作区（开发日志，隐私）
+.workbuddy/
+
+# 运行时状态数据（含服务对象记忆/亲密度/外观快照，隐私）
+data/memory.json
+data/intimacy.json
+data/game-state.json
+data/outfits/
+data/gohome-state.json
+
+# 临时对比脚本（含 persona 与对话样本）
+scripts/compare-models.mjs
+
+# 历史备份文件
+*.bak-*

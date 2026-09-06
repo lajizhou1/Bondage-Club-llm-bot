@@ -1,0 +1,290 @@
+{
+ "KeyProp": [
+  "Inject"
+ ],
+ "MedicalInjector": [
+  "Inject"
+ ],
+ "Crop": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "Flogger": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "Cane": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "HeartCrop": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "Paddle": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "CustomPaddle": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "WhipPaddle": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "Whip": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "CattleProd": [
+  "ShockItem"
+ ],
+ "TennisRacket": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "ForSaleSign": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "RainbowWand": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "Gavel": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "Feather": [
+  "TickleItem"
+ ],
+ "FeatherDuster": [
+  "TickleItem"
+ ],
+ "LongDuster": [
+  "TickleItem"
+ ],
+ "IceCube": [
+  "RubItem"
+ ],
+ "Diaper": [],
+ "BabyPowder": [
+  "RollItem"
+ ],
+ "Wipes": [
+  "RollItem"
+ ],
+ "WartenbergWheel": [
+  "RollItem"
+ ],
+ "VibratingWand": [
+  "MasturbateItem",
+  "RubItem"
+ ],
+ "SmallVibratingWand": [
+  "MasturbateItem",
+  "RubItem"
+ ],
+ "CandleWax": [
+  "PourItem"
+ ],
+ "LargeDildo": [
+  "MasturbateItem",
+  "RubItem",
+  "PenetrateItem"
+ ],
+ "PetToy": [
+  "TickleItem",
+  "SpankItem"
+ ],
+ "Vibrator": [
+  "MasturbateItem",
+  "RubItem"
+ ],
+ "Belt": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "Hairbrush": [
+  "SpankItem",
+  "BrushItem",
+  "RubItem",
+  "Scratch"
+ ],
+ "SmallDildo": [
+  "MasturbateItem",
+  "RubItem",
+  "PenetrateItem"
+ ],
+ "ElectricToothbrush": [
+  "TickleItem",
+  "MasturbateItem"
+ ],
+ "Toothbrush": [
+  "TickleItem"
+ ],
+ "ShockWand": [
+  "ShockItem"
+ ],
+ "Lotion": [
+  "RubItem"
+ ],
+ "Ruler": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "Sword": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "VibeRemote": [
+  "RubItem"
+ ],
+ "ShockRemote": [
+  "RubItem"
+ ],
+ "Towel": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "RopeCoilLong": [
+  "RubItem"
+ ],
+ "RopeCoilShort": [
+  "RubItem"
+ ],
+ "Ballgag": [
+  "RubItem"
+ ],
+ "LongSock": [
+  "RubItem"
+ ],
+ "Baguette": [
+  "SpankItem"
+ ],
+ "Panties": [
+  "RubItem"
+ ],
+ "TapeRoll": [
+  "RubItem"
+ ],
+ "Spatula": [
+  "SpankItem"
+ ],
+ "Broom": [
+  "SpankItem"
+ ],
+ "Phone1": [
+  "RubItem"
+ ],
+ "Phone2": [
+  "RubItem"
+ ],
+ "Scissors": [
+  "RubItem"
+ ],
+ "PlasticWrap": [
+  "RubItem"
+ ],
+ "GlassEmpty": [
+  "RubItem"
+ ],
+ "GlassFilled": [
+  "RubItem",
+  "SipItem"
+ ],
+ "PotionBottle": [
+  "RubItem"
+ ],
+ "Mug": [
+  "RubItem",
+  "SipItem"
+ ],
+ "Popcorn": [
+  "EatItem",
+  "ThrowItem"
+ ],
+ "PortalTablet": [
+  "RubItem"
+ ],
+ "Shark": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "BunPlush": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "FoxPlush": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "Karl": [],
+ "PetPotato": [
+  "RubItem"
+ ],
+ "Smartphone": [
+  "RubItem"
+ ],
+ "GlueTube": [],
+ "AnimeGirlWand": [],
+ "Brick": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "Trowel": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "Kyosensu": [
+  "RubItem"
+ ],
+ "Uchiwa": [
+  "RubItem"
+ ],
+ "Plushie": [
+  "SqueezeItem"
+ ],
+ "Cigarette": [
+  "RubItem"
+ ],
+ "FoamRoll": [
+  "SqueezeItem"
+ ],
+ "MiniDolls": [
+  "SqueezeItem"
+ ],
+ "GiftBox": [
+  "RubItem"
+ ],
+ "DragonPlush": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "Chocolate": [
+  "EatItem"
+ ],
+ "ElectricGuitar": [],
+ "Laptop": [
+  "RubItem",
+  "SpankItem"
+ ],
+ "R18Baton": [
+  "RubItem",
+  "SpankItem"
+ ],
+ "CandyCane": [
+  "RubItem",
+  "SpankItem"
+ ],
+ "GrilledSausage": [
+  "PenetrateItem",
+  "EatItem"
+ ],
+ "Foldingfan": [
+  "SpankItem",
+  "RubItem"
+ ],
+ "Oilpaperumbrella": []
+}
