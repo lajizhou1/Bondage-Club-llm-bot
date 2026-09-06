@@ -5313,6 +5313,13 @@ async function executeIntent(intent: Intent): Promise<void> {
           client.sendHidden("StopHoldLeash", no);
         } else {
           console.log(`[bot] room_move: #${no} 跟过来了 ✓`);
+          // #75h 到房重新握绳：握持状态不随人跨房走。BOT 先到、她后到——
+          // 必须等她人进了房再广播 HoldLeash（一到房就发=牵空气，目标不在房间广播无效）。
+          // 她是被牵过来的，脖子上必然有绳；接收端仍会自行校验，无绳则忽略（无害）。
+          await sleep(1000); // 刚进房客户端就绪缓冲
+          client.sendChatAction("HoldLeash", [{ SourceCharacter: client.player.MemberNumber ?? -1 }, { TargetCharacter: no }]);
+          client.sendHidden("HoldLeash", no);
+          console.log(`[bot] room_move: 重新握住 #${no} 的绳`);
         }
       }
       lastRoomMoveAt = Date.now();
