@@ -41,6 +41,7 @@ export type IntentAction =
   | "leash_hold"
   | "leash_release"
   | "lead_move"
+  | "room_move"
   | "cold_treatment"
   | "none";
 
@@ -79,6 +80,16 @@ export interface Intent {
   handheld?: string;
   /** lead_move 的牵引方向：closer（走近）/ away（走远，拉着她拖行）/ left / right */
   direction?: string;
+  /** #75 room_move 的目标区：female（女区）/ mixed（混区）/ male（男区）；缺省=当前区 */
+  space?: string;
+  /** #75 room_move 的定向房名（她点名要去的那间房，精确名）；有 room 时 space 忽略 */
+  room?: string;
+  /** #75d room_move 回家模式：true=回 BOT 自己的家（config.roomName，私房不走搜索，没房自动重建） */
+  home?: boolean;
+  /** #75e room_move 语义匹配：用户自然语言描述（如"猫窝"/"playroom"），代码搜索+LLM 仲裁挑最契合的房 */
+  query?: string;
+  /** #75f room_move 好友定位：去某个好友所在的房间（如"我们去药那个房间玩"→friend:"药"），代码查在线好友房名 */
+  friend?: string;
   /** #46 情绪系统：LLM 语义判定服务对象无视/岔开了 BOT 的上一句话（JSON 字段 serve_ignored） */
   serveIgnored?: boolean;
   /** #46 情绪系统：LLM 语义判定服务对象服软/道歉/执行了命令（JSON 字段 serve_complied） */
@@ -178,12 +189,16 @@ const ALLOWED_ACTIONS: IntentAction[] = [
   "leash_hold",
   "leash_release",
   "lead_move",
+  "room_move",
   "cold_treatment",
   "none",
 ];
 
 /** lead_move 的方向白名单 */
 const ALLOWED_LEAD_DIR = ["closer", "away", "left", "right"];
+
+/** #75 room_move 的目标区白名单（female=女区 / mixed=混区 / male=男区） */
+const ALLOWED_ROOM_SPACE = ["female", "mixed", "male"];
 
 /** 松紧调节方向白名单：item_adjust 专用，item_put 的组合调节（"绑X并绑紧"）也复用 */
 const ALLOWED_ADJUST = ["tighten_little", "tighten_lot", "loosen_little", "loosen_lot"];
@@ -486,6 +501,7 @@ function buildSystemPrompt(ctx: BrainContext): string {
     '{"action":"leash_hold","target":"<optional member name, defaults to serve target>","text":"<optional comment>"} — picks up and holds the target\'s leash. LEASHING HAS A STRICT 3-STEP ORDER (game rule): ① collar on neck (item_put PetCollar / collar of choice) → ② leash item (item_put CollarLeash or ChainLeash) → ③ leash_hold. Never say you grab/hold a leash that is not attached to her — walking the steps yourself (one per turn or combined) reads far better than skipping to the grab. If you emit leash_hold while she lacks a collar or leash, the code silently completes the missing steps for you, but the RP is yours to pace. While you hold it they cannot leave the room.',
     '{"action":"leash_release","target":"<optional member name>","text":"<optional comment>"} — lets go of the leash you are holding.',
     '{"action":"lead_move","direction":"<closer|away|left|right>","target":"<optional member name>","text":"<optional comment>"} — you walk in that direction while holding their leash. Moving AWAY from them pulls the leash taut and drags them along with you; moving closer gives slack. Requires leash_hold first.',
+    '{"action":"room_move","space":"<female|mixed|male>","room":"<exact room name>","home":true,"query":"<free-text like 猫窝/playroom>","text":"<optional comment>"} — ROOM CHANGE: you leave the current room for another public room. FOUR modes: (1) she names a SPECIFIC room with its exact name ("去XX房" and you happen to know the precise name) → pass it in "room"; code does an exact-match search. (2) she only names an area or wants somewhere livelier (e.g. "去女区找个有活人的房间") → use "space" (female=女区, mixed=混区, male=男区, omit=stay in current space). (3) she wants to go back to YOUR HOME room (回家/玩累了想回去) → set "home":true; your home is private and NOT searchable. (4) she describes a room in natural language WITHOUT giving its exact name (e.g. "我们去猫窝吧" — common for rooms you do not know the official name of) → put her description in "query" (free-text, Chinese or English); the code dual-searches (substring match on name+description, PLUS a full listing of the current space) and a second LLM call semantically picks the best match — you do NOT need to know room names. If you know the room is in a DIFFERENT area, also set "space". (5) she wants to go to wherever a FRIEND currently is (e.g. "我们去药那个房间玩" — 药 is a friend) → put the friend name in "friend" exactly as she said it; the code looks up the friend current room and goes there. Caveats the code handles: friend must be on YOUR friend list and online; if the friend is in a private room the room name may be invisible. Mode priority: "home" > "room" (exact) > "query" (semantic) > "space" (lively fallback). If you are holding someone on a leash they get taken along automatically. Blocked while you are bound/restrained or a gohome game is running; 10-minute cooldown between moves (going home is exempt).',
     '{"action":"cold_treatment","text":"<optional final words before going silent, e.g. 我不想听你解释。自己反省。>"} — ONLY available when your mood is 暴怒: you stop responding to her for a few turns (real silence, enforced by code). Use it when scolding and tightening have both failed — cold silence lands harder than any lecture. Her sincere softening will end it.',
     '{"action":"none"}',
     ...buildSkillPromptLines(),
@@ -1069,6 +1085,20 @@ function parseIntentFromObject(o: Record<string, unknown>): Intent {
       return { action, direction: dir, target: target || undefined, text: sanitizeText(o.text) || undefined };
     }
 
+    case "room_move": {
+      // #75 换房：定向房名（她点名的房）或按区找热闹房（代码负责搜索+加入）
+      // #75d home=true 回家模式（私房不走搜索，执行器直接 switchRoom+createIfMissing）
+      // #75e query=语义描述（代码搜+LLM 仲裁挑最契合的房）
+      // #75f friend=好友定位（查在线好友所在房名直进）
+      const rawSpace = typeof o.space === "string" ? o.space.trim().toLowerCase() : "";
+      const space = ALLOWED_ROOM_SPACE.includes(rawSpace) ? rawSpace : undefined;
+      const room = typeof o.room === "string" ? o.room.trim() : "";
+      const home = o.home === true;
+      const query = typeof o.query === "string" ? o.query.trim().slice(0, 60) : "";
+      const friend = typeof o.friend === "string" ? o.friend.trim().slice(0, 40) : "";
+      return { action, space, room: room || undefined, home, query: query || undefined, friend: friend || undefined, text: sanitizeText(o.text) || undefined };
+    }
+
     case "item_remove": {
       let slot = typeof o.slot === "string" ? o.slot.trim() : "";
       const target = typeof o.target === "string" ? o.target.trim() : "";
@@ -1114,5 +1144,65 @@ function sanitizeText(v: unknown): string {
   if (!text) return "";
   if (text.length > config.maxReplyLength) text = text.slice(0, config.maxReplyLength);
   return text;
+}
+
+/**
+ * #75e 房间仲裁：从搜索候选里挑最契合用户自然语言描述的那间
+ * 单独的小 LLM 调用（与 respond 并行不冲突，maxTokens=200 极小降低延迟/成本）。
+ * 校验 LLM 返回的房名**必须在候选列表里**（防幻觉编造房名）。
+ * 注意：单候选也必须仲裁——BC 搜索是子串匹配，"猫窝"可能只命中错误的房（18:08 实测
+ * 唯一候选 YeS 是描述碰巧含"猫窝"的房，真猫窝"Catnest/猫猫玩耍窝"反而搜不到）。
+ * @param query 用户的描述（如"猫窝"）—— LLM 据此判断语义
+ * @param candidates 已过滤的房间列表（满员/锁门/禁牵/黑名单已排除）
+ * @returns 选中的房间名；null = 候选里没有合适的（让上游告知用户换一间）
+ */
+export async function pickBestRoomFromCandidates(
+  query: string,
+  candidates: { Name: string; Description: string; MemberCount: number; MemberLimit: number }[]
+): Promise<string | null> {
+  // 空数组直接 null（单候选不跳过——必须经 LLM 语义确认）
+  if (candidates.length === 0) return null;
+
+  const list = candidates
+    .map(
+      (c, i) =>
+        `${i + 1}. 房名="${c.Name}" | 描述="${c.Description || "(无)"}" | 人数 ${c.MemberCount ?? "?"}/${c.MemberLimit || "无限制"}`
+    )
+    .join("\n");
+
+  const messages: Array<{ role: "system" | "user"; content: string }> = [
+    {
+      role: "system",
+      content:
+        "你是一个房间挑选助手。用户描述了一个想去的地方，下面是搜索到的候选房间。挑出最契合的那一间，只输出 JSON。",
+    },
+    {
+      role: "user",
+      content:
+        `用户想去的地方："${query}"\n\n候选房间（按搜索相关度排序，限前 ${candidates.length} 间）：\n${list}\n\n` +
+        `输出格式（严格 JSON，无其他文字）：\n{"picked":"<房名,必须完全匹配上面某个 Name 字段>","reason":"<一句简短中文理由,仅 picked=null 时必填>"}\n\n` +
+        `判断要点：①中文描述优先匹配中文房名/描述；②英文名要看描述是否一致；③如果候选里没有真正符合用户描述的（例如"猫窝"但候选全是健身房），picked 设为 null。`,
+    },
+  ];
+
+  try {
+    const content = await callLLM(messages, 200);
+    const json = JSON.parse(content) as { picked?: unknown; reason?: unknown };
+    const picked = typeof json.picked === "string" ? json.picked : null;
+    if (!picked) {
+      console.log(`[brain] pickBestRoomFromCandidates: LLM 判定无匹配 (${typeof json.reason === "string" ? json.reason : "无理由"})`);
+      return null;
+    }
+    // 校验返回值在候选里（防 LLM 幻觉编造房名）
+    const inList = candidates.some((c) => c.Name === picked);
+    if (!inList) {
+      console.log(`[brain] pickBestRoomFromCandidates: LLM 返回的 "${picked}" 不在候选里，丢弃`);
+      return null;
+    }
+    return picked;
+  } catch (e) {
+    console.log(`[brain] pickBestRoomFromCandidates 调用失败（${(e as Error).message}），回退取第一条`);
+    return candidates[0].Name;
+  }
 }
 

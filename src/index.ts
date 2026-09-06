@@ -3,7 +3,7 @@ import * as anger from "./anger";
 import * as punishment from "./punishment";
 import * as intimacy from "./intimacy";
 import { BCClient, ItemChangeEvent } from "./client";
-import { generateIntents, extractMemories, llmEnabled, decideGohomeLimit, Intent, BrainContext } from "./brain";
+import { generateIntents, extractMemories, llmEnabled, decideGohomeLimit, pickBestRoomFromCandidates, Intent, BrainContext } from "./brain";
 import { MemoryStore } from "./memory";
 import { GameManager, GameRule, GameTurnResult, RewardAction } from "./game";
 import { GameStateStore } from "./game-state";
@@ -1891,6 +1891,11 @@ function unlockDifficultyRel(targetNo: number, group: string, name: string): { d
 // ============ #19 牵引系统状态 ============
 // BOT 当前牵着谁的皮带（成员号集合；官方支持同时牵多个，这里同样用 Set）
 const leashHeld = new Set<number>();
+/** #75 上次 LLM 主动换房时间戳（ms）；10 分钟冷却防 LLM 抽风连环换房 */
+let lastRoomMoveAt = 0;
+// #75c room_move 牵行中标记：进房就绪处理器看到它就不清空 leashHeld 并自动发跨房牵绳信号
+// （同 gohomeOrchestrating 的待遇；否则换房途中名单被清，信号发给空气——17:44 实测事故根因）
+let roomMoveDragging = false;
 // 服务对象的皮带被谁牵着（成员号；null=没被任何人牵）。来自他人的 Action 广播感知。
 let serveLeashedBy: number | null = null;
 
@@ -2482,7 +2487,7 @@ client.onRoomJoined = (roomName) => {
   //   并且按官方 ChatRoomPingLeashedPlayers 行为对每个被牵着的人发 Leash beep
   //   （对方客户端校验通过后自动离房跟过来；校验不过她那边会断绳并发 RemoveLeash）。
   //   非编排期间维持旧行为（清空）——旧的"重进房必重抓"观察在没有 beep 机制时仍然成立。
-  if (gohomeOrchestrating && leashHeld.size > 0) {
+  if ((gohomeOrchestrating || roomMoveDragging) && leashHeld.size > 0) {
     for (const held of leashHeld) client.sendLeashBeep(held);
   } else {
     leashHeld.clear();
@@ -5027,6 +5032,294 @@ async function executeIntent(intent: Intent): Promise<void> {
         client.sendChat(intent.text, "Chat");
         rememberOwn(intent.text);
       }
+      break;
+    }
+
+    case "room_move": {
+      // #75 LLM 换房：去指定区找热闹房。LLM 不知道房间名，代码负责搜索+加入。
+      // 前置门槛：①10 分钟冷却（防抽风连环换房）②BOT 被绑不能走 ③限时回家游戏期间不搅局
+      const now = Date.now();
+      const ROOM_MOVE_COOLDOWN_MS = 10 * 60 * 1000;
+      // #75d 回家免冷却：回家是收场动作（出门才冷却防抽风），连着"出门→回家"不该被拦
+      if (!intent.home && lastRoomMoveAt > 0 && now - lastRoomMoveAt < ROOM_MOVE_COOLDOWN_MS) {
+        const waitedMin = Math.round((now - lastRoomMoveAt) / 60000);
+        console.log(`[bot] room_move rejected: 冷却中（距上次换房 ${waitedMin} 分钟 < 10）`);
+        client.sendChat("（环顾了一下房间）刚换过地方，先在这儿待会儿，别把人折腾来折腾去的。");
+        return;
+      }
+      const selfApp = client.getAppearance(client.player.MemberNumber ?? -1);
+      if (hasRestraintItem(selfApp)) {
+        console.log(`[bot] room_move rejected: BOT 自己被绑着，走不了`);
+        client.sendChat("（拽了拽身上的束缚，轻笑）……我现在这副样子，哪儿也去不了，不是吗。");
+        return;
+      }
+      const gs = loadGohomeState();
+      if (gohomeOrchestrating || gs) {
+        console.log(`[bot] room_move rejected: 限时回家游戏进行中（phase=${gs?.phase ?? "orchestrating"}）`);
+        client.sendChat("（正忙着这局游戏）等这局完了，我再带你出去转。");
+        return;
+      }
+      // space 归一化：female→女区("") / mixed→混区("X") / male→男区("M")；缺省=当前配置区
+      const spaceMap: Record<string, string> = { female: "", mixed: "X", male: "M" };
+      const spaceArg = intent.space && intent.space in spaceMap ? spaceMap[intent.space] : config.roomSpace;
+      const spaceLabel = spaceArg === "" ? "女区" : spaceArg === "X" ? "混区" : "男区";
+      // 三种模式：回家（#75d，私房直进+没房重建）/ 定向房名（她点名的房，校验存在/可进）/ 按区找房（热闹房→人数最多兜底）
+      let room: string | null;
+      let joinedLabel: string;
+      if (intent.home) {
+        // #75d 回家：家是私房不进公共搜索列表，定向房名模式搜不到——直接 switchRoom+createIfMissing
+        if (!config.roomName) {
+          console.log(`[bot] room_move rejected: 回家模式但未配置 BC_ROOM_NAME`);
+          client.sendChat("（摊手）我现在没个固定的家……先在这儿待着吧。");
+          return;
+        }
+        room = config.roomName;
+        joinedLabel = `家 "${config.roomName}"`;
+      } else if (intent.room) {
+        // 定向进房：搜全量房名精确匹配（房名搜索惯例 toUpperCase，600 行同款）
+        const target = intent.room.trim();
+        const rooms = await client.searchRooms();
+        const found = rooms.find((r) => (r.Name ?? "").toUpperCase() === target.toUpperCase());
+        if (!found) {
+          console.log(`[bot] room_move: 没有叫 "${target}" 的房`);
+          client.sendChat(`（挑眉）"${target}"？我可没听说过有这么一间房。`);
+          return;
+        }
+        if (found.Locked === true) {
+          console.log(`[bot] room_move: "${found.Name}" 锁着门`);
+          client.sendChat(`（看了一眼）"${found.Name}"门都锁了，进不去的。`);
+          return;
+        }
+        const fLimit = found.MemberLimit ?? 0;
+        const fCount = found.MemberCount ?? 0;
+        if (fLimit > 0 && fLimit - fCount < 1) {
+          console.log(`[bot] room_move: "${found.Name}" 满员 ${fCount}/${fLimit}`);
+          client.sendChat(`（探头看了看）"${found.Name}"已经满员了，挤不进去。`);
+          return;
+        }
+        if ((found.BlockCategory ?? []).includes("Leashing") && leashHeld.size > 0) {
+          console.log(`[bot] room_move: "${found.Name}" 禁止牵绳，牵着人进不得`);
+          client.sendChat(`（收了收绳子）"${found.Name}"那间房不许牵绳——我要是进去了，手里的绳就断了。先松开她，还是换一间？`);
+          return;
+        }
+        if (kickedRooms.has(found.Name)) {
+          console.log(`[bot] room_move: "${found.Name}" 在被踢黑名单里`);
+          client.sendChat(`（摇头）"${found.Name}"那间我进不去——上回被赶出来过。`);
+          return;
+        }
+        room = found.Name;
+        joinedLabel = `"${found.Name}"`;
+      } else if (intent.friend) {
+        // #75f 好友定位进房：她说"我们去XX那个房间玩"（XX=好友名）→ 查在线好友所在房名直进
+        // 前提：XX 必须是 BOT 的好友且在线；普通好友在私房里只能看到 Private:true 看不到房名
+        const friends = await client.queryOnlineFriends();
+        const fq = intent.friend.toLowerCase();
+        // 匹配优先级：昵称精确 → 注册名精确 → 昵称包含 → 注册名包含（昵称优先于注册名）
+        const pick = (pred: (name: string | undefined, nick: string | undefined) => boolean) =>
+          friends.find((f) => pred(f.MemberName, f.MemberNickname));
+        const hit =
+          pick((n, k) => k === intent.friend) ??
+          pick((n) => n === intent.friend) ??
+          pick((_n, k) => (k ?? "").toLowerCase() === fq) ??
+          pick((n) => (n ?? "").toLowerCase() === fq) ??
+          pick((_n, k) => (k ?? "").toLowerCase().includes(fq)) ??
+          pick((n) => (n ?? "").toLowerCase().includes(fq));
+        if (!hit) {
+          console.log(`[bot] room_move friend "${intent.friend}"：不在线或不在好友列表（在线好友 ${friends.length} 人）`);
+          client.sendChat(`（想了想）"${intent.friend}"……不在我好友里，或者现在不在线——我看不到人家在哪儿。`);
+          return;
+        }
+        const friendLabel = hit.MemberNickname || hit.MemberName || `#${hit.MemberNumber ?? "?"}`;
+        if (!hit.ChatRoomName) {
+          // 普通好友在私房里服务器只回 Private:true 不给房名（Ownership/Lover 才可见）
+          console.log(`[bot] room_move friend "${friendLabel}"：在私房里看不到房名（Private=${hit.Private === true}）`);
+          client.sendChat(`（摇头）${friendLabel}这会儿在一间私房里，我看不见房名……让她报个房名，或者换个别的地方？`);
+          return;
+        }
+        if (hit.ChatRoomName === client.currentRoom) {
+          console.log(`[bot] room_move friend "${friendLabel}"：就在当前房 "${hit.ChatRoomName}"`);
+          client.sendChat(`（轻笑）${friendLabel}不就在这间房里吗？抬头看看。`);
+          return;
+        }
+        console.log(
+          `[bot] room_move friend: ${friendLabel} 在 "${hit.ChatRoomName}"（${hit.ChatRoomMemberCount ?? "?"}/${hit.ChatRoomLimit ?? "?"}）`
+        );
+        room = hit.ChatRoomName;
+        joinedLabel = `${friendLabel} 所在的 "${hit.ChatRoomName}"`;
+      } else if (intent.query) {
+        // #75e 语义匹配进房：用户给自然语言描述（如"猫窝"），LLM 不知道精确房名
+        // 双路搜索：①定向子串匹配（Query+SearchDescs，私房可按名命中）②全区列表（空 Query）
+        // ——BC 搜索是子串匹配："猫窝"搜不到"猫猫玩耍窝"（18:08 实测只命中描述碰巧含
+        // "猫窝"的 YeS），必须靠全区列表+LLM 语义仲裁兜底。合并去重后**永远**走 LLM 仲裁
+        // （单候选也要确认"这间就是她说的那个地方"，防子串误命中）。
+        const targeted = await client.searchRooms({ Query: intent.query, SearchDescs: true, FullRooms: false, ShowLocked: false });
+        const broad = await client.searchRooms({ Query: "", Space: spaceArg, FullRooms: false, ShowLocked: false });
+        const seenNames = new Set<string>();
+        const merged: typeof targeted = [];
+        for (const r of [...targeted, ...broad]) {
+          if (!r.Name || seenNames.has(r.Name)) continue;
+          seenNames.add(r.Name);
+          merged.push(r);
+        }
+        console.log(
+          `[bot] room_move query "${intent.query}": 定向 ${targeted.length} 间 + 全区 ${broad.length} 间 = 合并 ${merged.length} 间`
+        );
+        const filtered = merged.filter((r) => {
+          if (!r.Name) return false;
+          if (kickedRooms.has(r.Name)) return false;
+          const limit = r.MemberLimit ?? 0;
+          const count = r.MemberCount ?? 0;
+          // 牵着人时需要至少 2 个空位（自己+她），独自时 1 个就够
+          const need = leashHeld.size > 0 ? 2 : 1;
+          if (limit > 0 && limit - count < need) return false;
+          if ((r.BlockCategory ?? []).includes("Leashing") && leashHeld.size > 0) return false;
+          return true;
+        });
+        if (filtered.length === 0) {
+          const reasons: string[] = [];
+          if (merged.length > 0) {
+            if (merged.some((r) => kickedRooms.has(r.Name ?? ""))) reasons.push("部分被踢过");
+            if (merged.some((r) => (r.MemberLimit ?? 0) > 0 && (r.MemberLimit ?? 0) - (r.MemberCount ?? 0) < (leashHeld.size > 0 ? 2 : 1))) reasons.push("满员");
+            if (merged.some((r) => (r.BlockCategory ?? []).includes("Leashing") && leashHeld.size > 0)) reasons.push("禁牵绳");
+          }
+          console.log(`[bot] room_move query "${intent.query}" 无可进房（合并 ${merged.length} 间，拦因: ${reasons.join("/") || "全无结果"}）`);
+          client.sendChat(
+            merged.length === 0
+              ? `（皱眉）"${intent.query}"——搜了一圈没找到这么一间房。`
+              : `（皱眉）"${intent.query}"搜到几间，但${reasons.join("、")}，进不去。换个别的吧。`
+          );
+          return;
+        }
+        // 永远 LLM 仲裁（定向命中排前面=LLM 看到的"按相关度排序"），候选上限 60 间防 prompt 过大
+        const chosenName = await pickBestRoomFromCandidates(
+          intent.query,
+          filtered.slice(0, 60).map((r) => ({
+            Name: r.Name!,
+            Description: r.Description ?? "",
+            MemberCount: r.MemberCount ?? 0,
+            MemberLimit: r.MemberLimit ?? 0,
+          }))
+        );
+        if (!chosenName) {
+          const list = filtered
+            .slice(0, 3)
+            .map((r) => `"${r.Name}"（${r.MemberCount ?? "?"}/${r.MemberLimit || "∞"}）`)
+            .join("、");
+          client.sendChat(
+            `（翻了翻列表）"${intent.query}"搜到 ${filtered.length} 间像的——${list}${filtered.length > 3 ? "……" : ""}，但都不太对，你换个说法我再找找？`
+          );
+          return;
+        }
+        console.log(`[bot] room_move query: LLM 仲裁选中 "${chosenName}"（候选 ${filtered.length} 间）`);
+        room = chosenName;
+        joinedLabel = `"${chosenName}"`;
+      } else {
+        // 找房：先找达标热闹房，找不到退而求其次去人数最多的（深夜兜底，同 gohome 策略）
+        room = await gohomePickBusyRoom([], spaceArg);
+        if (!room) room = await gohomePickMostCrowdedRoom(spaceArg);
+        if (!room) {
+          console.log(`[bot] room_move: ${spaceLabel}没有能进的房`);
+          client.sendChat(`（皱眉）${spaceLabel}现在连一间能进的房都没有……回头再说吧。`);
+          return;
+        }
+        joinedLabel = `${spaceLabel}的 "${room}"`;
+      }
+      // 换房 + 被踢自动换下一间（#75b）：门槛房（账号天数 bot，如 YeS 要求 ≥30 天）
+      // 通常进房 1-2 秒内踢人。进房信号由 onRoomReady 自动发（roomMoveDragging=true 时不清空
+      // leashHeld 且每次进房都 beep，她客户端跟着最新房名走），4 秒复查稳定性：
+      // 被踢/失败 → 被踢房已进黑名单 → 重新找房换下一间接她，最多试 3 间。
+      // #75g 慢动作台词提前发：换房要 6~16 秒（进房+等她跟来），台词若攒到最后发，
+      // "我牵着你过去"这类出发语会变成"人已经到了才说要走"的时态错乱。
+      // 改为动身前发（校验已过、即将换房），失败兜底台词照旧失败时说，衔接自然。
+      if (intent.text) {
+        client.sendChat(intent.text, "Chat");
+        rememberOwn(intent.text);
+      }
+      console.log(`[bot] room_move: 去${joinedLabel}（手里牵着 ${leashHeld.size} 人）`);
+      const heldNos = [...leashHeld]; // 快照：兜底（roomMoveDragging 下不会被清，双保险）
+      const prevRoom = client.currentRoom; // #75f 失败回原房用（她还在那儿等着）
+      let finalRoom: string | null = null;
+      let candidate: string | null = room;
+      roomMoveDragging = true;
+      try {
+        for (let attempt = 0; attempt < 3 && candidate; attempt++) {
+          // #75d 回家模式带 createIfMissing：房被回收了就地重建（switchRoom 内已处理建房竞态）
+          const joinedNow = await client.switchRoom(
+            candidate,
+            intent.home ? { createIfMissing: true, description: "ljzsbot 的家" } : undefined
+          );
+          if (!joinedNow) {
+            console.log(`[bot] room_move: 进 "${candidate}" 失败，换下一间（${attempt + 1}/3）`);
+          } else {
+            // 快照兜底：万一就绪处理器的自动 beep 因时序没发到，这里补发一次
+            for (const no of heldNos) client.sendLeashBeep(no);
+            await sleep(4000); // 门槛房踢人观察窗
+            if (client.currentRoom === joinedNow) {
+              finalRoom = joinedNow;
+              break;
+            }
+            console.log(
+              `[bot] room_move: "${joinedNow}" 进房后被踢（current=${client.currentRoom ?? "无"}），换下一间接人（${attempt + 1}/3）`
+            );
+          }
+          // 重新找房：被踢/失败房已进黑名单（onJoinFailed 记录），gohomePickBusyRoom 自动排除；
+          // 定向房被踢后同样退化为按区找房（她点名那间进不去，找间热闹的补偿她）；
+          // #75d 回家模式例外：家永远重试同一间（createIfMissing 会重建，黑名单不拦自己的家）；
+          // #75f 好友房例外：她要找的是人不是热闹——不兜底换房，失败回原房交代
+          if (intent.home) {
+            candidate = room;
+            await sleep(2000);
+          } else if (intent.friend) {
+            candidate = null;
+          } else {
+            candidate = await gohomePickBusyRoom([], spaceArg);
+            if (!candidate) candidate = await gohomePickMostCrowdedRoom(spaceArg);
+          }
+        }
+      } finally {
+        roomMoveDragging = false;
+      }
+      if (!finalRoom) {
+        // 全进不去：30 秒重试定时器会把 BOT 接回家（joinRetryTimer），这里只交代台词
+        if (intent.friend) {
+          // #75f 好友房进不去：回原来的房找她（她没收到任何 beep 不会动）
+          console.log(`[bot] room_move: 好友房进不去，回原房 "${prevRoom ?? "无"}"`);
+          if (prevRoom) {
+            await client.switchRoom(prevRoom, prevRoom === config.roomName ? { createIfMissing: true } : undefined);
+          }
+          client.sendChat(`（皱眉）${joinedLabel}……我进不去。看来得让她出来接咱们，或者换个地方。`);
+        } else {
+          console.log(`[bot] room_move: 连试几间都进不去，先回家`);
+          client.sendChat("（皱眉）接连几间都进不去……先回家待着，回头再带你出来。");
+        }
+        return;
+      }
+      // #75c 等她跟来（同 gohome 模式）：8 秒没到催一次信号，再等 8 秒；没跟上的松绳放人
+      for (const no of heldNos) {
+        let followed = client.getCharacter(no) != null;
+        if (!followed) {
+          await sleep(8000);
+          followed = client.getCharacter(no) != null;
+          if (!followed) {
+            client.sendLeashBeep(no);
+            await sleep(8000);
+            followed = client.getCharacter(no) != null;
+          }
+        }
+        if (!followed) {
+          console.log(`[bot] room_move: #${no} 没跟来——松绳放人`);
+          leashHeld.delete(no);
+          client.sendChatAction("StopHoldLeash", [{ SourceCharacter: client.player.MemberNumber ?? -1 }, { TargetCharacter: no }]);
+          client.sendHidden("StopHoldLeash", no);
+        } else {
+          console.log(`[bot] room_move: #${no} 跟过来了 ✓`);
+        }
+      }
+      lastRoomMoveAt = Date.now();
+      const dragged = leashHeld.size > 0 ? `，牵着 ${leashHeld.size} 人一起` : "";
+      recentChat.push(`[换房] 你带人去了${joinedLabel}（现房 "${finalRoom}"）${dragged}。`);
+      if (recentChat.length > MAX_RECENT) recentChat.shift();
+      rememberOwn(`（带她换到 "${finalRoom}"）`);
       break;
     }
 
