@@ -6,7 +6,7 @@
 import { BCClient } from "../src/client";
 import { config } from "../src/config";
 
-const TARGET_MEMBER = parseInt(process.argv[2] ?? "121681", 10);
+const TARGET_MEMBER = parseInt(process.argv[2] ?? "123456", 10);
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

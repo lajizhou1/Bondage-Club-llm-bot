@@ -1,5 +1,5 @@
 // ===========================================================================
-// 一次性测试脚本：登录 BOT → 调用 client.addFriend(#121681, 药)
+// 一次性测试脚本：登录 BOT → 调用 client.addFriend(#目标, 目标名)
 //                验证 AccountUpdate{FriendList:[…]} 能成功加好友，
 //                以及 onBeep 通道是否在线（停留几秒等待 Beep 回声）。
 // 用法：先杀掉 BOT 进程（避免顶号），然后 npx tsx scripts/test-add-friend.ts
@@ -8,7 +8,7 @@
 import { BCClient } from "../src/client";
 import { config } from "../src/config";
 
-const TARGET_MEMBER = 121681; // "药"
+const TARGET_MEMBER = 123456; // 目标注册号（换成你要测试的号）
 const WAIT_FOR_BEEP_MS = 25_000;
 
 const client = new BCClient();

@@ -2130,7 +2130,7 @@ function detectAddFriendCommand(content: string): boolean {
   return /(添加|加|添加好友|加好友|加入好友)/.test(t) && /(好友|朋友)/.test(t);
 }
 
-/** 从"添加好友 #121681"/"加好友 121681"/"添加好友药" 这种口令里提取目标成员号。
+/** 从"添加好友 #123456"/"加好友 123456"/"添加好友某某" 这种口令里提取目标成员号。
  *  优先识别 #数字；否则 fallback 在房间成员表里按名字匹配。 */
 function parseFriendNumberFromCommand(content: string): number | null {
   const numMatch = content.match(/#?\s*(\d{3,10})/);
@@ -2503,14 +2503,18 @@ client.onRoomJoined = (roomName) => {
   if (!botOutfitAppliedOnStartup) {
     botOutfitAppliedOnStartup = true;
     const botNo0 = client.player.MemberNumber;
-    // #61 道具互动权限白名单（服务器端硬执法）：ItemPermission=3 = 仅白名单可动 BOT 的穿戴。
-    //   白名单默认 = 服务对象（SERVE_MEMBER）+ .env 追加 BOT_ITEM_WHITELIST。自己/Owner 天然放行。
-    //   这样其他玩家连道具操作都发不过来，衣服不需要也不应该上锁（#61 用户拍板）。
-    const whitelist = new Set<number>();
-    const serveNo0 = serveMemberNumber();
-    if (serveNo0 !== null) whitelist.add(serveNo0);
-    for (const extra of config.botItemWhitelist) whitelist.add(extra);
-    client.setPermissionWhitelistOnly(Array.from(whitelist));
+    // #61 道具互动权限（服务器端硬执法，server_app.js ChatRoomGetAllowItem）。
+    //   BOT_ITEM_PERMISSION=3（默认）= 仅白名单可动 BOT 穿戴，白名单 = SERVE_MEMBER + BOT_ITEM_WHITELIST；
+    //   =1 = 公开·黑名单除外（BC 官方下拉档），WhiteList 不生效、BlackList 仍拦；其余档位见 config 注释。
+    if (config.botItemPermission === 3) {
+      const whitelist = new Set<number>();
+      const serveNo0 = serveMemberNumber();
+      if (serveNo0 !== null) whitelist.add(serveNo0);
+      for (const extra of config.botItemWhitelist) whitelist.add(extra);
+      client.setPermissionWhitelistOnly(Array.from(whitelist));
+    } else {
+      client.setItemPermission(config.botItemPermission);
+    }
     if (!config.botOutfitOnStartup) {
       console.log("[bot-outfit] 启动重穿已关闭（BOT_OUTFIT_ON_STARTUP=false），保留当前穿着；白名单权限照常生效");
     } else {
@@ -2759,7 +2763,7 @@ client.onChat = async (event) => {
     if (testMode && detectAddFriendCommand(content)) {
       const target = parseFriendNumberFromCommand(content);
       if (target === null) {
-        client.sendChat("（皱眉）添加好友需要 #编号——例如：添加好友 #121681");
+        client.sendChat("（皱眉）添加好友需要 #编号——例如：添加好友 #123456");
         return;
       }
       if (target === client.player.MemberNumber) {
@@ -3405,9 +3409,16 @@ client.onBeep = async (event) => {
 
   // 非游戏场景：把 beep 事件记到 recentChat，LLM 知道她私聊了什么
   recentChat.push(
-    `[好友 Beep] ${event.senderName} 发了${event.beepType ? ` ${event.beepType} 类型` : ""}的 Beep${event.message ? `，留言：${event.message}` : ""}`
+    `[好友 Beep] ${event.senderName} 发了${event.beepType ? ` ${event.beepType} 类型` : ""}的 Beep${event.message ? `，留言：${event.message}` : ""}${event.roomName ? `，她当前在房间「${event.roomName}」` : "，她当前不在任何房间"}`
   );
   if (recentChat.length > MAX_RECENT) recentChat.shift();
+  // #77 Beep 召唤响应（2026-09-06 19:59 实测：她 Beep"主人可以过来嘛"BOT 毫无反应——
+  //   Beep 只记 recentChat 的话，要等她下次进房说话才被 LLM 看到，她在异地召唤时 BOT 就是聋的）。
+  //   她不在房时 Beep 是唯一通道：立即触发 respond，LLM 从 Beep 行读到房名即可 room_move 过去找她。
+  if (!client.getCharacter(serveNo)) {
+    console.log("[beep] 她不在房，Beep 即时唤醒 LLM 决策");
+    await respond(true);
+  }
 };
 
 /**

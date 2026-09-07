@@ -34,7 +34,7 @@
 - **主动/被动模式**：窗口期内 bot 主动感知、自主决策；平时纯事件驱动
 - **集中/扩散模式**：一对一专注 ↔ 社交模式（可跟路人互动，边界可控）
 
-## 快速开始
+## 快速开始（老手版）
 
 ```bash
 npm install
@@ -48,10 +48,90 @@ npm run build
 npm start
 ```
 
-全部配置项说明见 [.env.example](.env.example)（58 项，均有中文注释）。
+## 从零部署（新手版，一步步来）
+
+### 第 0 步：准备三样东西
+
+| 需要什么 | 去哪弄 | 说明 |
+|----------|--------|------|
+| **Node.js 22+** | https://nodejs.org 下载 LTS 版安装 | 装完在终端输 `node -v` 能出版本号即可 |
+| **DeepSeek API Key** | https://platform.deepseek.com 注册 → 充值几块钱 → 创建 API key | bot 的"大脑"。也可以换成任何 OpenAI 兼容接口（Qwen/本地模型） |
+| **BC 游戏账号** | https://www.bondage-europe.com 注册 | **强烈建议新注册一个号专用做 bot**——不要用你自己的主号（有封号风险，且两个进程同账号会互相顶下线） |
+
+### 第 1 步：下载代码
+
+```bash
+git clone https://github.com/lajizhou1/bc-llm-bot.git
+cd bc-llm-bot
+npm install
+```
+
+（不用 git 的话：GitHub 页面绿色 Code 按钮 → Download ZIP → 解压后在该文件夹里运行 `npm install`）
+
+### 第 2 步：配置 .env
+
+复制 `.env.example` 为 `.env`（Windows 直接复制粘贴改名），然后用记事本打开，**最少填这 4 项**：
+
+```ini
+BC_USERNAME=你的bot账号名
+BC_PASSWORD=你的bot账号密码
+SERVE_MEMBER=服务对象的注册号（bot 只对这个人扮演主人/仆人，其他人只礼貌回应）
+LLM_API_KEY=sk-你的DeepSeek密钥
+```
+
+怎么查注册号：游戏里点开对方资料卡，名字旁边的 `#数字` 就是。
+
+**大陆网络必须加代理**（游戏服务器被墙）：
+
+```ini
+BC_PROXY_URL=http://127.0.0.1:7890
+```
+
+端口按你本机代理软件改（Clash 默认 7890，v2rayN 默认 10809）。
+
+### 第 3 步：编译 + 启动
+
+```bash
+npm run build
+npm start
+```
+
+看到这几行日志就是**启动成功**：
+
+```
+[bc] login OK: 你的bot名 (#注册号)
+[bc] in room: xxx (n members)
+[bc] bot is ready. Waiting for messages...
+```
+
+bot 会自动进自己的房间（没有就自动创建）。让你的服务对象凭**房名**进房即可。
+
+### 第 4 步：日常开关
+
+- **停止**：终端按 `Ctrl + C`（或直接关窗口）
+- **再启动**：不用重新编译，直接 `npm start`
+- **改了 .env**：保存后重启 bot 才生效
+- ⚠️ **只能跑一个实例**：同一账号开两个进程会互相顶下线。启动前确认上一个已经关了
+
+### 常见问题
+
+| 症状 | 原因与解法 |
+|------|-----------|
+| 启动卡在连接/登录超时 | 代理没配或端口不对，检查 `BC_PROXY_URL` |
+| `login OK` 但马上掉线 | 另一个实例在跑同账号（包括你自己浏览器开的游戏页面用了同一账号） |
+| bot 说话很慢（30 秒+）| DeepSeek 高峰期拥堵，属正常；介意可换模型或本地部署 |
+| 想换 bot 的性格 | `.env` 里 `BOT_PERSONA`（完全自定义人设）|
+| bot 的衣服乱了 | 让服务对象对它说"重穿我的衣服" |
+
+### ⚠️ 隐私提醒
+
+`.env` 里有你的账号密码和 API key，**永远不要**把它提交到 git、截图或发给别人。仓库自带的 `.gitignore` 已默认排除它。
+
+全部配置项说明见 [.env.example](.env.example)（每项均有中文注释）。
 
 ## 数据来源与版权声明
 
+- 本项目采用 [MIT 许可证](LICENSE) 开源——可自由使用、修改、分发，需保留版权声明。
 - `data/` 目录下的道具目录（bc-catalog）、可锁资产表（lockable-assets）、手持道具表（handheld-*）等数据，**提取自 [Bondage Club 官方开源代码](https://gitgud.io/BondageProjects/Bondage-College)**，仅用于客户端协议兼容，版权归 Bondage Projects 原作者所有。
 - 本仓库**不包含 BC 官方源码本体**（官方明确声明代码不可公开再分发）。
 - 本项目为个人爱好者项目，与 Bondage Projects 无官方关联。BC 社区存在使用无头 bot 的传统（如 BCX 作者维护的 BotAPI 库），但请在使用时遵守游戏规则、尊重其他玩家。

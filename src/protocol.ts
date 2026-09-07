@@ -21,6 +21,9 @@ export const S2C = {
   ChatRoomSyncMapData: "ChatRoomSyncMapData",
   ChatRoomSyncPose: "ChatRoomSyncPose",
   ChatRoomSyncItem: "ChatRoomSyncItem",
+  /** #78 BCE 客户端"给人穿衣服"用的整包同步通道（server_app.js:1835 ChatRoomSyncSingle，IO.to 全房发）——
+   *  BOT 没注册这条路径时，所有通过 BCE 给 BOT 换装的操作都会静默丢失（缓存不更新、记住我的衣服抓不到） */
+  ChatRoomSyncSingle: "ChatRoomSyncSingle",
   AccountBeep: "AccountBeep",
   AccountQueryResult: "AccountQueryResult",
 } as const;

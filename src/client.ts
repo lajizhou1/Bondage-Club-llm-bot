@@ -261,6 +261,15 @@ export class BCClient {
     );
     // 道具变更回执（自己或别人身上的道具穿上/脱下都会广播）
     this.socket.on(S2C.ChatRoomSyncItem, (data: unknown) => this.handleSyncItem(data));
+    // #78 BCE 客户端"给人穿衣服"用的整包同步通道：服务器 ChatRoomCharacterUpdate 调用
+    //   ChatRoomSyncSingle 全房广播（server_app.js:1835）。载荷结构同 ChatRoomSyncCharacter
+    //   （{ SourceMemberNumber, Character: ... }），复用 handleSyncCharacter 整包覆盖缓存 + 日志回滚检测。
+    //   之前漏注册这条路径时，BCE 给 BOT 换装会被静默吃掉——"记住我的衣服"抓不到新装。
+    this.socket.on(
+      S2C.ChatRoomSyncSingle,
+      (data: { Character?: Character | Character[]; SourceMemberNumber?: number }) =>
+        this.handleSyncCharacter(data)
+    );
     this.socket.on(S2C.AccountBeep, (data: AccountBeepData) => this.handleBeep(data));
     this.socket.on(S2C.AccountQueryResult, (data: unknown) => this.handleAccountQueryResult(data));
   }
@@ -694,6 +703,17 @@ export class BCClient {
       Action: action,
     });
     console.log(`[ownership] ${action} → #${memberNumber}`);
+  }
+
+  /** 直接设置道具互动权限档位（0-4，语义见 server_app.js ChatRoomGetAllowItem）：
+   *  0=所有人（黑名单都不拦） 1=公开·黑名单除外 2=支配者+白名单+恋人 3=仅白名单+恋人 4=仅恋人。
+   *  供 BOT_ITEM_PERMISSION 非 3 档使用；WhiteList/BlackList 名单不动。 */
+  setItemPermission(level: number): void {
+    const labels = ["所有人", "公开·黑名单除外", "支配者+白名单+恋人", "仅白名单+恋人", "仅恋人"];
+    const v = Math.max(0, Math.min(4, Math.floor(level)));
+    this.limiter.send(C2S.AccountUpdate, { ItemPermission: v });
+    this._player.ItemPermission = v;
+    console.log(`[permission] ItemPermission=${v}（${labels[v]}）`);
   }
 
   /**

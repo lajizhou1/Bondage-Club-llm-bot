@@ -90,6 +90,10 @@ export interface Config {
   /** #61 BOT 道具互动白名单追加名单（BOT_ITEM_WHITELIST，逗号分隔注册号）。
    *  默认 = 服务对象（SERVE_MEMBER）一人；ItemPermission=3 时名单外玩家不能动 BOT 的穿戴 */
   botItemWhitelist: number[];
+  /** #61 BOT 道具互动权限档位（BOT_ITEM_PERMISSION，默认 3）。语义见 server_app.js ChatRoomGetAllowItem：
+   *  0=所有人（黑名单都不拦） 1=公开·黑名单除外 2=支配者+白名单+恋人（黑名单除外）
+   *  3=仅白名单+恋人（#61 防路人乱动） 4=仅恋人 */
+  botItemPermission: number;
   /** #71 一次性紧急解套：列出启动时要从 BOT 自身外观里脱掉的 Item* 道具名（仅清理列出的，不碰其他）
    *  留空=不清理。用法见下方实现注释。 */
   botEmergencyStrip: string[];
@@ -215,6 +219,11 @@ export const config: Config = {
     .split(",")
     .map((s) => Number.parseInt(s.trim(), 10))
     .filter((n) => Number.isFinite(n) && n > 0),
+  botItemPermission: (() => {
+    const raw = process.env.BOT_ITEM_PERMISSION;
+    const v = raw !== undefined && raw.trim() !== "" ? Number(raw) : 3;
+    return Number.isInteger(v) && v >= 0 && v <= 4 ? v : 3;
+  })(),
   /** #60 启动重穿总开关（详见 #60 节） */
   botOutfitOnStartup: toBool(process.env.BOT_OUTFIT_ON_STARTUP, true),
   /** #62 每次进房自动摆的姿势（详见接口注释） */
