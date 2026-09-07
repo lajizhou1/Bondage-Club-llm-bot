@@ -25,5 +25,9 @@ data/gohome-state.json
 # 临时对比脚本（含 persona 与对话样本）
 scripts/compare-models.mjs
 
+# LLM 临时测试输出（含对话样本，隐私）
+glm_*.json
+.tmp-tree.json
+
 # 历史备份文件
 *.bak-*

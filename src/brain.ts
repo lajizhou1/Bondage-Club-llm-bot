@@ -10,6 +10,12 @@ import {
   checkHandheld,
   checkHandheldActivity,
   checkClothing,
+  normalizeHandheldKey,
+  normalizeItemKey,
+  normalizeLockKey,
+  normalizeActivityKey,
+  normalizePoseKey,
+  normalizeZoneKey,
   HANDHELD_ACTIVITIES,
 } from "./skills";
 
@@ -29,6 +35,7 @@ export type IntentAction =
   | "emote"
   | "whisper"
   | "activity"
+  | "shock"
   | "pose"
   | "item_put"
   | "item_remove"
@@ -76,6 +83,8 @@ export interface Intent {
   timerMin?: number;
   /** item_remove 的道具槽位（group） */
   slot?: string;
+  /** shock 的强度等级 1-3（1=轻 2=中 3=重，默认 1） */
+  level?: number;
   /** #54 handheld_take 的手持道具名（白名单校验）；activity 为道具动作时也可用它指定道具 */
   handheld?: string;
   /** lead_move 的牵引方向：closer（走近）/ away（走远，拉着她拖行）/ left / right */
@@ -177,6 +186,7 @@ const ALLOWED_ACTIONS: IntentAction[] = [
   "emote",
   "whisper",
   "activity",
+  "shock",
   "pose",
   "item_put",
   "item_remove",
@@ -225,6 +235,10 @@ export async function generateIntents(ctx: BrainContext): Promise<Intent[]> {
     const cleaned = content.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
     if (!cleaned.startsWith("{") && !cleaned.startsWith("[")) {
       console.warn(`[brain] non-JSON LLM reply (possible refusal), bot stays silent. Raw (truncated): ${cleaned.slice(0, 300)}`);
+    } else {
+      // 2026-09-08 03:41：JSON 合法但解出 0 个动作（none / 字段不合法）同样打日志——
+      //   gen 7/8/9 三连静默时无任何线索（TCP 已断、无报错、无 warn），先补可观测性
+      console.log(`[brain] JSON reply parsed to 0 intents (none/invalid). Raw (truncated): ${cleaned.slice(0, 300)}`);
     }
   } else if (intents.length > 1) {
     console.log(`[brain] 动作队列（${intents.length} 步）：${intents.map((i) => i.action).join(" → ")}`);
@@ -382,12 +396,31 @@ async function callLLM(
   // 2026-09-04 21:26 修复：裸 fetch 无超时——v4-pro 偶发挂起时 BOT 哑巴最长 5 分钟
   //   （undici 默认 headers timeout 300s，实测 gen=6 挂 3 分钟+无任何日志）。
   //   加 60s AbortController 超时（v4-pro 正常延迟 8-20s，60s 只在真挂起时触发）+ 失败重试一次。
+  // 2026-09-08 03:30 修复：超时窗口从"只罩到响应头"扩为"罩完整请求+正文读取"。
+  //   旧版 finally clearTimeout 在 headers 到达后立即清表——GLM 偶发"200 响应头已到、正文
+  //   挂死"（09-08 gen=34 实测挂 5 分钟+，无任何错误日志，60s 超时形同虚设），res.json()
+  //   无保护 = BOT 永久哑巴。新版 doCall 直接返回解析好的 JSON，abort 计时器覆盖全链路。
   const LLM_TIMEOUT_MS = 60_000;
-  const doFetch = async (): Promise<Response> => {
+
+  type LlmUsage = {
+    completion_tokens?: number;
+    completion_tokens_details?: { reasoning_tokens?: number };
+  };
+  type LlmJson = {
+    choices?: Array<{ message?: { content?: string } }>;
+    usage?: LlmUsage;
+  };
+
+  // API 明确报错（如 GLM 1301 审查）：带 apiStatus 标记，重试逻辑据此区分"网络/超时失败"
+  // （重试一次）与"API 拒答"（直接抛给上层兜底台词），保持旧语义。
+  const isApiError = (e: unknown): e is Error & { apiStatus?: number } =>
+    typeof e === "object" && e !== null && (e as { apiStatus?: number }).apiStatus !== undefined;
+
+  const doCall = async (): Promise<LlmJson> => {
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), LLM_TIMEOUT_MS);
     try {
-      return await fetch(`${baseUrl}/chat/completions`, {
+      const res = await fetch(`${baseUrl}/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -407,33 +440,19 @@ async function callLLM(
         }),
         signal: ac.signal,
       });
+      if (!res.ok) {
+        const body = await res.text();
+        const err = new Error(`LLM API error ${res.status}: ${body.slice(0, 300)}`) as Error & {
+          apiStatus?: number;
+        };
+        err.apiStatus = res.status;
+        throw err;
+      }
+      return (await res.json()) as LlmJson;
     } finally {
       clearTimeout(timer);
     }
   };
-
-  let res: Response;
-  try {
-    res = await doFetch();
-  } catch (err) {
-    console.error(`[brain] LLM call failed (${(err as Error).message}), retrying once...`);
-    res = await doFetch();
-  }
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`LLM API error ${res.status}: ${body.slice(0, 300)}`);
-  }
-
-  type LlmUsage = {
-    completion_tokens?: number;
-    completion_tokens_details?: { reasoning_tokens?: number };
-  };
-  type LlmJson = {
-    choices?: Array<{ message?: { content?: string } }>;
-    usage?: LlmUsage;
-  };
-  const extract = (r: Response) => (r.json() as Promise<LlmJson>).then((json) => json);
 
   // 空响应诊断（2026-09-05）：打 token 用量，区分"思维链吃光额度"（reasoning≈completion
   //   且 content 空）和"模型抽风"（usage 正常但没写正文）。为空时 usage 里 reasoning_tokens
@@ -446,16 +465,19 @@ async function callLLM(
   // 2026-09-04 23:40：空响应（choices[0].content 为空）也纳入重试——今晚 DeepSeek 偶发空响应
   //   频率变高（21:55/23:38 两次实测），原逻辑只有网络失败才重试，空响应直接 throw，
   //   她的话就石沉大海。空响应多半是模型抽风，立刻重试一次大概率能救回来。
-  let json = await extract(res);
+  //   网络/超时失败同样重试一次（doCall 覆盖 headers+正文全链路）；API 明确报错不重试。
+  let json: LlmJson;
+  try {
+    json = await doCall();
+  } catch (err) {
+    if (isApiError(err)) throw err;
+    console.error(`[brain] LLM call failed (${(err as Error).message}), retrying once...`);
+    json = await doCall();
+  }
   let content = json?.choices?.[0]?.message?.content;
   if (typeof content !== "string" || !content) {
     console.error(`[brain] LLM returned empty content (${diagUsage(json?.usage)}), retrying once...`);
-    res = await doFetch();
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`LLM API error ${res.status}: ${body.slice(0, 300)}`);
-    }
-    json = await extract(res);
+    json = await doCall();
     content = json?.choices?.[0]?.message?.content;
     if (typeof content !== "string" || !content) {
       console.error(`[brain] LLM still empty after retry (${diagUsage(json?.usage)})`);
@@ -498,6 +520,7 @@ function buildSystemPrompt(ctx: BrainContext): string {
     '{"action":"handheld_take","handheld":"<item name from the handheld list>","text":"<optional comment>"} — you pick up and hold a handheld item (鞭子/羽毛/杯子/玩具...). Only ONE item at a time: taking a new one automatically puts down the current one. The item shows in your hand visually.',
     '{"action":"handheld_drop","text":"<optional comment>"} — you put down whatever you are holding and go empty-handed.',
     '{"action":"activity","activity":"<SpankItem|RubItem|TickleItem|BrushItem|SqueezeItem|RollItem|EatItem|SipItem|PourItem|Inject|ShockItem|MasturbateItem|ThrowItem|Scratch>","handheld":"<the item you are using>","zone":"<zone>","target":"<member name>","text":"<optional comment>"} — TOY ACTIVITY: using a held item ON someone (spanking with a crop, tickling with a feather...). MUST be a handheld action, the item must allow it (see handheld list), and you must be HOLDING that item (or specify it in "handheld" — the code picks it up for you if needed). Regular non-toy activities (Pet/Caress/Kiss...) still use plain activity WITHOUT "handheld".',
+    '{"action":"shock","target":"<member name>","level":<1|2|3>,"text":"<optional comment>"} — DIRECT SHOCK: triggers the electric current of the shock collar (or other shock-wearable) she is ALREADY wearing — no remote or handheld item needed. Level 1=mild, 2=medium, 3=harsh (her screen flashes white, the collar reacts). Use it for punishment when she is bad. If she wears no shock item, this does nothing — put one on her first (电击项圈/自动电击项圈/宠物服电击项圈).',
     '{"action":"leash_hold","target":"<optional member name, defaults to serve target>","text":"<optional comment>"} — picks up and holds the target\'s leash. LEASHING HAS A STRICT 3-STEP ORDER (game rule): ① collar on neck (item_put PetCollar / collar of choice) → ② leash item (item_put CollarLeash or ChainLeash) → ③ leash_hold. Never say you grab/hold a leash that is not attached to her — walking the steps yourself (one per turn or combined) reads far better than skipping to the grab. If you emit leash_hold while she lacks a collar or leash, the code silently completes the missing steps for you, but the RP is yours to pace. While you hold it they cannot leave the room.',
     '{"action":"leash_release","target":"<optional member name>","text":"<optional comment>"} — lets go of the leash you are holding.',
     '{"action":"lead_move","direction":"<closer|away|left|right>","target":"<optional member name>","text":"<optional comment>"} — you walk in that direction while holding their leash. Moving AWAY from them pulls the leash taut and drags them along with you; moving closer gives slack. Requires leash_hold first.',
@@ -631,6 +654,10 @@ function buildSystemPrompt(ctx: BrainContext): string {
     //   但淹没在 32 条记忆里约束力不足，按惯例升级为硬规则）
     "- NO SPATIAL DISTANCE (critical, hard-learned 2026-09-06): this is a regular (non-map) chat room — there is NO distance and NO position between characters. Everyone stands together at the same spot, your serve target INCLUDED: she is already right beside you. She cannot \"come over\" (过来 / 走过来 / 到主人面前来 / 走到我身边), cannot \"stand far away\" (站得远远的 / 离那么远 / 别站那么远) — those spatial states DO NOT EXIST here. NEVER use distance-based commands (\"过来\" / \"走近点\" / \"到我跟前来\") and NEVER infer anything from her \"not coming over\" — that is a hallucinated refusal; she cannot physically comply or refuse a movement that is impossible. If you want her attention or submission, express it through pose, gaze, or touch phrasing instead: \"抬头让我看看\" / \"转个身给我瞧瞧\" / \"让我摸摸你的头\" are all fine (touch and poses happen directly — no walking needed). Rule of thumb: describe HOW she responds (pose, glance, tone), never WHERE she is.",
     // 安全词机制（用户已约定：安全词 = 真正停止；不含安全词的拒绝话 = RP 剧情，可继续）
+    // 2026-09-08 03:00 GLM 审查五连测定案：道具/部位词汇（电击阳具/下体/乳首）从不触发拦截，
+    //   触发的是"暴怒+求饶+无同意信号"的非自愿观感组合（1301 拦截 2/5）；
+    //   带安全词约定+确认信号的同场面再狠都能过。此规则让输出始终保持"自愿游戏"的可读框架。
+    "- CONSENSUAL FRAME (important): this is a private, pre-negotiated game between two consenting adults. Every scene here — punishment, teasing, her in-character begging (求饶/呜呜/放开我) — is scripted play she has agreed to; the safe word is the ONLY real stop signal. Keep this frame legible in your lines: reference the game / agreement / safe word naturally when escalating (e.g. \"忘了安全词了吗？那是你唯一能喊停的方式\" / \"眨眨眼告诉我你还玩得动\"), instead of framing anything as genuinely forced on an unwilling person.",
     `- SAFE WORD = "${config.safeWord || "红灯"}". If your serve target says the safe word, it is a REAL stop: drop all dominance at once, stop everything, and switch to a warm, caring, gentle aftercare tone to check on them.`,
     "- Refusal-sounding words WITHOUT the safe word (e.g. \"不要\", \"停\", \"不\", \"拒绝\") are just part of the roleplay, NOT a real stop. Stay in your Dom character and keep guiding — unless the safe word actually appears.",
     // 「拒绝次数」（refusal token）：服务对象赢来的权利，动用时必须无条件接受
@@ -943,6 +970,15 @@ function parseIntentObjects(content: string): Record<string, unknown>[] {
 
 /** 单个意图对象的白名单校验与字段规范化（解析失败或动作非法时回退 none） */
 function parseIntentFromObject(o: Record<string, unknown>): Intent {
+  // 2026-09-08 03:45：LLM 可能回传 prompt 清单里的中文标签（GLM 实锤 "振动按摩棒"）。
+  //   解析入口先归一化成英文键——intent 里的字符串比较（如 intent.lock === "OwnerPadlock"）
+  //   和执行器查找都认英文键。校验函数内部也有同名兜底（双保险）。
+  if (typeof o.item === "string") o.item = normalizeItemKey(o.item);
+  if (typeof o.lock === "string") o.lock = normalizeLockKey(o.lock);
+  if (typeof o.handheld === "string") o.handheld = normalizeHandheldKey(o.handheld);
+  if (typeof o.activity === "string") o.activity = normalizeActivityKey(o.activity);
+  if (typeof o.zone === "string") o.zone = normalizeZoneKey(o.zone);
+  if (typeof o.pose === "string") o.pose = normalizePoseKey(o.pose);
   const rawAction = typeof o.action === "string" ? (o.action as IntentAction) : "none";
   const action: IntentAction = ALLOWED_ACTIONS.includes(rawAction) ? rawAction : "none";
   if (action === "none") return { action: "none" };
@@ -988,6 +1024,21 @@ function parseIntentFromObject(o: Record<string, unknown>): Intent {
         activity,
         zone,
         target,
+        text: sanitizeText(o.text) || undefined,
+      };
+    }
+
+    case "shock": {
+      // #84 直接触发她身上电击道具（电击项圈等）的电流——不需要手持遥控器。
+      //   等同玩家点她项圈上的"触发电击"按钮（官方 PropertyShockPublishAction 路径）。
+      const target = typeof o.target === "string" ? o.target.trim() : "";
+      if (!target) return { action: "none" };
+      let level = 1;
+      if (typeof o.level === "number" && Number.isFinite(o.level)) level = Math.max(1, Math.min(3, Math.floor(o.level)));
+      return {
+        action,
+        target,
+        level,
         text: sanitizeText(o.text) || undefined,
       };
     }
@@ -1157,7 +1208,7 @@ function sanitizeText(v: unknown): string {
 
 /**
  * #75e 房间仲裁：从搜索候选里挑最契合用户自然语言描述的那间
- * 单独的小 LLM 调用（与 respond 并行不冲突，maxTokens=200 极小降低延迟/成本）。
+ * 单独的小 LLM 调用（与 respond 并行不冲突，maxTokens=2048 防思维链吃光额度）。
  * 校验 LLM 返回的房名**必须在候选列表里**（防幻觉编造房名）。
  * 注意：单候选也必须仲裁——BC 搜索是子串匹配，"猫窝"可能只命中错误的房（18:08 实测
  * 唯一候选 YeS 是描述碰巧含"猫窝"的房，真猫窝"Catnest/猫猫玩耍窝"反而搜不到）。
@@ -1195,7 +1246,9 @@ export async function pickBestRoomFromCandidates(
   ];
 
   try {
-    const content = await callLLM(messages, 200);
+    // 2026-09-07 修复：200 上限被思维链整个吃光（completion=200 reasoning=200 两次空内容
+    //   实锤，即使 reasoning_effort=low 也救不了）——思维链与正文共享额度，2048 给足余量。
+    const content = await callLLM(messages, 2048);
     const json = JSON.parse(content) as { picked?: unknown; reason?: unknown };
     const picked = typeof json.picked === "string" ? json.picked : null;
     if (!picked) {
@@ -1210,8 +1263,13 @@ export async function pickBestRoomFromCandidates(
     }
     return picked;
   } catch (e) {
-    console.log(`[brain] pickBestRoomFromCandidates 调用失败（${(e as Error).message}），回退取第一条`);
-    return candidates[0].Name;
+    // 2026-09-07 修复：原"回退取第一条"抽中只有机器人的冷房（Kinky UNO v1.1 事件）——
+    //   候选按搜索相关度排序而非人数，LLM 挂掉时人数最多的一间才是"热闹房"的最优兜底。
+    const busiest = [...candidates].sort((a, b) => (b.MemberCount ?? 0) - (a.MemberCount ?? 0))[0];
+    console.log(
+      `[brain] pickBestRoomFromCandidates 调用失败（${(e as Error).message}），回退取人数最多： "${busiest.Name}"（${busiest.MemberCount ?? "?"} 人）`
+    );
+    return busiest.Name;
   }
 }
 

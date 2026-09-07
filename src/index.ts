@@ -2515,6 +2515,14 @@ client.onRoomJoined = (roomName) => {
     } else {
       client.setItemPermission(config.botItemPermission);
     }
+    // 启动改名（BOT_NICKNAME 配置；留空=不动当前昵称）
+    if (config.botNickname) {
+      client.setNickname(config.botNickname);
+    }
+    // 启动设标签颜色（BOT_LABEL_COLOR 配置；留空=不动），全服聊天列表立即生效
+    if (config.botLabelColor) {
+      client.setLabelColor(config.botLabelColor);
+    }
     if (!config.botOutfitOnStartup) {
       console.log("[bot-outfit] 启动重穿已关闭（BOT_OUTFIT_ON_STARTUP=false），保留当前穿着；白名单权限照常生效");
     } else {
@@ -3718,7 +3726,18 @@ async function runRespond(speakerIsServe: boolean): Promise<void> {
 
   try {
     // #73 动作队列：单动作（绝大多数）或最多 3 个有序动作（换装/惩罚仪式等）
-    const intents = await generateIntents(ctx);
+    let intents = await generateIntents(ctx);
+    // 2026-09-08 03:41：服务对象直接说话却被 LLM 判 none——系统提示明文规定"对直接对话
+    //   沉默几乎总是错"，多为模型抽风（gen 7/8/9 三连静默实锤）。重试一次拉回；
+    //   仍空则保持沉默（原始内容已在 brain 侧打日志可查）。
+    if (!intents.length && speakerIsServe) {
+      console.log("[respond] serve speech parsed to 0 intents, retrying once...");
+      intents = await generateIntents(ctx);
+      if (!intents.length) {
+        console.log("[respond] still 0 intents after retry, staying silent");
+        return;
+      }
+    }
     if (!intents.length) return;
     const intent = intents[0]; // serve_* flag 挂在第一个动作上（parseIntents 保证）
     // #46/#49 情绪语义汇报处理（先记账再执行，保证本次语气已反映最新怒气变化会留到下一轮）：
@@ -4299,7 +4318,9 @@ async function executeIntent(intent: Intent): Promise<void> {
           console.log(`[bot] toy activity auto-take: ${item}（${handheldCN(item)}）`);
           await sleep(500);
         }
-        client.sendActivity(intent.activity, intent.zone, targetNo);
+        client.sendActivity(intent.activity, intent.zone, targetNo, {
+          activityAsset: { name: item, group: "ItemHandheld" },
+        });
         console.log(`[bot] toy activity: ${intent.activity} with ${item} -> ${client.nameOf(targetNo)}@${intent.zone}`);
         rememberOwn(`（用${handheldCN(item)}对 ${client.nameOf(targetNo)} 的${zoneCN(intent.zone)}执行 ${intent.activity}）`);
         if (intent.text) {
@@ -4866,6 +4887,54 @@ async function executeIntent(intent: Intent): Promise<void> {
     }
 
     // ============ #19 牵引系统 ============
+    case "shock": {
+      // #84 直接触发她身上电击道具的电流（等同玩家点项圈上的"触发电击"按钮）
+      const serveNo = serveMemberNumber();
+      let targetNo: number | null = null;
+      if (intent.target) {
+        targetNo = client.resolveMemberNumber(intent.target);
+      } else {
+        targetNo = serveNo;
+      }
+      if (targetNo === null) {
+        console.log(`[bot] shock rejected: target "${intent.target ?? "(serve)"}" not found`);
+        break;
+      }
+      // 找她身上带 ShockLevel 属性的电击道具（电击项圈家族全在 ItemNeck；兜底扫全部槽位）
+      const SHOCK_ASSETS = ["ShockCollar", "AutoShockCollar", "PetSuitShockCollar", "CollarShockUnit", "CollarAutoShockUnit"];
+      const appearance = client.getAppearance(targetNo) ?? [];
+      let found: { name: string; group: string } | null = null;
+      // 优先 ItemNeck（电击项圈主槽）
+      for (const e of appearance) {
+        const entry = e as { Name?: string; Group?: string };
+        if (entry?.Group === "ItemNeck" && entry.Name && SHOCK_ASSETS.includes(entry.Name)) {
+          found = { name: entry.Name, group: entry.Group };
+          break;
+        }
+      }
+      if (!found) {
+        for (const e of appearance) {
+          const entry = e as { Name?: string; Group?: string };
+          if (entry?.Name && entry.Group && SHOCK_ASSETS.includes(entry.Name)) {
+            found = { name: entry.Name, group: entry.Group };
+            break;
+          }
+        }
+      }
+      if (!found) {
+        console.log(`[bot] shock rejected: ${client.nameOf(targetNo)} 身上没有电击道具（5件可遥控项圈均未佩戴）`);
+        client.sendChat(`（扫了一眼 ${client.nameOf(targetNo)} 的脖子——上面没有能电到她的东西，先得给她戴个电击项圈才行）`);
+        break;
+      }
+      client.sendShockAction(targetNo, intent.level ?? 1, found.name, found.group);
+      rememberOwn(`（触发了 ${client.nameOf(targetNo)} ${found.name === "PetSuitShockCollar" ? "宠物服电击项圈" : "电击项圈"} 的电流，强度 ${intent.level ?? 1}）`);
+      if (intent.text) {
+        client.sendChat(intent.text, "Chat");
+        rememberOwn(intent.text);
+      }
+      break;
+    }
+
     case "leash_hold": {
       // 目标：默认服务对象
       const serveNo = serveMemberNumber();

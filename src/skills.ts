@@ -248,7 +248,7 @@ export const HANDHELD_ITEMS: Record<string, HandheldDef> = {
   Ruler: { cn: "尺子", allow: ["SpankItem", "RubItem"] },
   Sword: { cn: "泡沫剑", allow: ["SpankItem", "RubItem"] },
   VibeRemote: { cn: "振动玩具遥控器", allow: ["RubItem"] },
-  ShockRemote: { cn: "电击遥控器", allow: ["RubItem"] },
+  ShockRemote: { cn: "电击遥控器（隔空触发她身上电击项圈的电流，对她戴项圈的部位用）", allow: ["RubItem", "ShockItem"] },
   Towel: { cn: "浴巾", allow: ["SpankItem", "RubItem"] },
   RopeCoilLong: { cn: "长捆绳", allow: ["RubItem"] },
   RopeCoilShort: { cn: "短捆绳", allow: ["RubItem"] },
@@ -318,9 +318,81 @@ export const HANDHELD_ACTIVITIES: Record<string, HandheldActivityDef> = {
   ThrowItem: { cn: "投掷", zones: ["ItemHead", "ItemMouth", "ItemBreast", "ItemTorso", "ItemFeet"] },
   Scratch: { cn: "轻挠", zones: ["ItemArms", "ItemBoots", "ItemBreast", "ItemButt", "ItemEars", "ItemFeet", "ItemHands", "ItemHead", "ItemLegs", "ItemMouth", "ItemNeck", "ItemNipples", "ItemNose", "ItemPelvis", "ItemTorso"] },
 };
+/** 中文名→英文键归一化。2026-09-08 03:45 实锤：GLM 把 prompt 清单里的中文标签原样回传
+ *  （"handheld":"振动按摩棒"）→ 白名单只认英文键 → 好台词整条被静默丢弃（gen4 重试也同错）。
+ *  规则：①原键直通 ②剥掉"（…）"注释后缀再试 ③按 cn 标签（及其去注释基名）反查。
+ *  白名单外回原名——后续 check 自然报"不识别"，不吞错。 */
+export function normalizeCnKey<T extends { cn?: string }>(name: string, table: Record<string, T>): string {
+  const t = name.trim();
+  if (t in table) return t;
+  const stripped = t.replace(/[（(][^（）()]*[）)]/g, "").trim();
+  if (stripped && stripped in table) return stripped;
+  for (const [key, def] of Object.entries(table)) {
+    const cn = (def?.cn ?? "").trim();
+    if (!cn) continue;
+    const cnBase = cn.replace(/[（(][^（）()]*[）)]/g, "").trim();
+    if (cn === t || cn === stripped) return key;
+    if (cnBase && (cnBase === t || cnBase === stripped)) return key;
+    // 复合标签（"摸摸头/拍拍头"、"站起来/恢复正常站立"）：逐段匹配，
+    // LLM 只回其中一段（"拍拍头"）也能命中
+    const segments = (cnBase || cn).split("/").map((s) => s.trim()).filter(Boolean);
+    if (segments.some((s) => s === t || s === stripped)) return key;
+  }
+  return name;
+}
+
+/** 手持道具名归一化（"振动按摩棒" → "VibratingWand"） */
+export function normalizeHandheldKey(name: string): string {
+  return normalizeCnKey(name, HANDHELD_ITEMS);
+}
+/** 束缚道具名归一化（"电击项圈" → "ShockCollar"） */
+export function normalizeItemKey(name: string): string {
+  return normalizeCnKey(name, ITEM_SKILLS);
+}
+/** 锁名归一化（"主人定时锁" → "OwnerTimerPadlock"） */
+export function normalizeLockKey(name: string): string {
+  return normalizeCnKey(name, LOCKS);
+}
+/** 动作名归一化（"拍拍头" → "Pet"） */
+export function normalizeActivityKey(name: string): string {
+  return normalizeCnKey(name, ACTIVITY_SKILLS);
+}
+/** 姿势名归一化（"跪下" → "Kneel"） */
+export function normalizePoseKey(name: string): string {
+  return normalizeCnKey(name, POSE_SKILLS);
+}
+/** 手持道具动作名归一化（"拍打" → "SpankItem"） */
+export function normalizeHandheldActivityKey(name: string): string {
+  return normalizeCnKey(name, HANDHELD_ACTIVITIES);
+}
+/** 部位（zone）归一化：ZONE_CN 中文反查（"嘴部"/"口塞槽" → "ItemMouth"）。
+ *  注意不能复用 normalizeSlot——那个只覆盖 REMOVABLE_SLOTS，activity 的 zone 范围更广。 */
+export function normalizeZoneKey(zone: string): string {
+  const t = zone.trim();
+  if (ZONE_CN[t]) return t; // 本来就是英文组名
+  const noSuffix = t.replace(/槽$/, "").trim();
+  if (ZONE_CN[noSuffix]) return noSuffix;
+  // ZONE_CN 值剥注释反查（"嘴部" 命中 "嘴部（外层口塞）"）
+  for (const [group, cn] of Object.entries(ZONE_CN)) {
+    const cnBase = cn.replace(/[（(][^（）()]*[）)]/g, "").trim();
+    if (cnBase === t || cnBase === noSuffix) return group;
+  }
+  // SLOT_ALIAS 口语别名兜底（"口塞"/"腿铐"/"眼罩"…；含剥"槽"后缀形态）
+  const alias = SLOT_ALIAS[t] ?? SLOT_ALIAS[t.toLowerCase()] ?? SLOT_ALIAS[noSuffix];
+  if (alias) return alias;
+  // 超短口语词（LLM zone 参数常见的单词回传）
+  const SHORT_ZONE: Record<string, string> = {
+    嘴: "ItemMouth", 腿: "ItemLegs", 脚: "ItemFeet", 手: "ItemHands",
+    臂: "ItemArms", 颈: "ItemNeck", 头: "ItemHead", 胸: "ItemBreast",
+    臀: "ItemButt", 眼: "ItemHead", 耳: "ItemEars", 鼻: "ItemNose",
+  };
+  if (SHORT_ZONE[t]) return SHORT_ZONE[t];
+  return zone;
+}
+
 /** 校验手持道具名；返回定义（ok=false 表示不在 86 件白名单里） */
 export function checkHandheld(name: string): { ok: boolean; def?: HandheldDef; reason?: string } {
-  const def = HANDHELD_ITEMS[name];
+  const def = HANDHELD_ITEMS[normalizeHandheldKey(name)];
   if (!def) return { ok: false, reason: `handheld item "${name}" not in whitelist` };
   return { ok: true, def };
 }
@@ -336,10 +408,11 @@ export function checkHandheldActivity(
   name: string,
   zone?: string
 ): { ok: boolean; zones?: string[]; reason?: string } {
-  const def = HANDHELD_ACTIVITIES[name];
+  const def = HANDHELD_ACTIVITIES[normalizeHandheldActivityKey(name)];
   if (!def) return { ok: false, reason: `handheld activity "${name}" not in whitelist` };
   if (zone === undefined) return { ok: true, zones: def.zones };
-  if (!def.zones.includes(zone)) return { ok: false, reason: `zone "${zone}" not allowed for ${name}` };
+  const zn = normalizeZoneKey(zone);
+  if (!def.zones.includes(zn)) return { ok: false, reason: `zone "${zone}" not allowed for ${name}` };
   return { ok: true };
 }
 
@@ -369,12 +442,13 @@ export function findHandheldByText(text: string): string | null {
 
 /** 校验动作是否可用；zone 为空时返回该动作的全部可用部位 */
 export function checkActivity(name: string, zone?: string): { ok: boolean; zones?: string[]; reason?: string } {
-  const def = ACTIVITY_SKILLS[name];
+  const def = ACTIVITY_SKILLS[normalizeActivityKey(name)];
   if (!def) return { ok: false, reason: `activity "${name}" not in whitelist` };
-  const official = activityByName.get(name);
+  const official = activityByName.get(normalizeActivityKey(name));
   if (!official) return { ok: false, reason: `activity "${name}" not found in catalog` };
   if (zone === undefined) return { ok: true, zones: def.zones };
-  if (!def.zones.includes(zone)) return { ok: false, reason: `zone "${zone}" not allowed for ${name}` };
+  const zn = normalizeZoneKey(zone);
+  if (!def.zones.includes(zn)) return { ok: false, reason: `zone "${zone}" not allowed for ${name}` };
   return { ok: true };
 }
 
@@ -401,7 +475,7 @@ const POSE_SKILLS: Record<string, PoseSkillDef> = {
 };
 
 export function checkPose(name: string): { ok: boolean; pose?: string[]; reason?: string } {
-  const def = POSE_SKILLS[name];
+  const def = POSE_SKILLS[normalizePoseKey(name)];
   if (!def) return { ok: false, reason: `pose "${name}" not in whitelist` };
   return { ok: true, pose: def.pose };
 }
@@ -444,6 +518,11 @@ const ITEM_SKILLS: Record<string, ItemSkillDef> = {
   PetCollar: { group: "ItemNeck", cn: "宠物项圈" },
   PostureCollar: { group: "ItemNeck", cn: "姿势项圈" },
   HeartCollar: { group: "ItemNeck", cn: "心心项圈" },
+  // 电击项圈（2026-09-08 #80 电击玩法：官方源码查证均为普通道具无变体；
+  // 触发电击 = BOT 手持电击棒/赶牛棒（#54 已收录）+ ShockItem 动作（动作表已收录））
+  ShockCollar: { group: "ItemNeck", cn: "电击项圈" },
+  AutoShockCollar: { group: "ItemNeck", cn: "自动电击项圈" },
+  PetSuitShockCollar: { group: "ItemNeck", cn: "宠物服电击项圈" },
   // 口塞（嘴部）
   BallGag: { group: "ItemMouth", cn: "口球" },
   BitGag: { group: "ItemMouth", cn: "硅胶口衔" },
@@ -490,6 +569,11 @@ const ITEM_SKILLS: Record<string, ItemSkillDef> = {
   ChainLeash: { group: "ItemNeckRestraints", cn: "牵引链" },
   // 颈饰挂件（#16 限时回家：宠物标牌）
   CustomCollarTag: { group: "ItemNeckAccessories", cn: "宠物标牌（可写字，戴在项圈上）" },
+  // 电击玩具（2026-09-08 #80）：乳首/下体/臀三槽，官方源码查证均无变体；
+  // 注意 CollarShockUnit/CollarAutoShockUnit（电击单元）刻意未收录——TYPED 复杂变体有配置坑，待基础款玩顺再议
+  ShockClamps: { group: "ItemNipples", cn: "电击乳头夹" },
+  ShockDildo: { group: "ItemVulva", cn: "电击阳具" },
+  ShockPlug: { group: "ItemButt", cn: "电击肛塞" },
 };
 
 /** 每个白名单道具实际发送的（group, name）——去掉 _Arms/_Legs/_Feet/_Pelvis 这类区分后缀 */
@@ -498,9 +582,11 @@ const ITEM_SEND_NAME: Record<string, string> = Object.fromEntries(
 );
 
 export function checkItem(key: string): { ok: boolean; group?: string; name?: string; reason?: string } {
-  const def = ITEM_SKILLS[key];
+  // 2026-09-08：中文标签归一化（"电击项圈" → "ShockCollar"），后续查找全用归一化后的键
+  const canon = normalizeItemKey(key);
+  const def = ITEM_SKILLS[canon];
   if (!def) return { ok: false, reason: `item "${key}" not in whitelist` };
-  const sendName = ITEM_SEND_NAME[key];
+  const sendName = ITEM_SEND_NAME[canon];
   const catalogItem = itemIndex.get(`${def.group}/${sendName}`);
   if (!catalogItem) return { ok: false, reason: `item "${def.group}/${sendName}" not found in catalog` };
   return { ok: true, group: def.group, name: sendName };
@@ -639,7 +725,14 @@ export const CLOTHING_ITEMS: Record<string, string> = {
 export function checkClothing(key: string): { ok: boolean; group?: string; name?: string; cn?: string; reason?: string } {
   const cn = CLOTHING_ITEMS[key];
   if (!cn) {
-    // 兼容 LLM 只报名字不带组前缀（"TShirt1" / "旗袍"）：全表反查唯一匹配
+    // 2026-09-08：LLM 回传中文标签（"旗袍"）→ 剥注释后按 cn 反查唯一匹配
+    const stripped = key.trim().replace(/[（(][^（）()]*[）)]/g, "").trim();
+    const byCn = Object.entries(CLOTHING_ITEMS).filter(([, v]) => v === key.trim() || v === stripped);
+    if (byCn.length === 1) {
+      const [k, v] = byCn[0];
+      return { ok: true, group: k.split("/")[0], name: k.split("/")[1], cn: v };
+    }
+    // 兼容 LLM 只报名字不带组前缀（"TShirt1"）：全表反查唯一匹配
     const byName = Object.entries(CLOTHING_ITEMS).filter(([k]) => k.split("/")[1] === key);
     if (byName.length === 1) {
       const [k, v] = byName[0];
@@ -924,7 +1017,13 @@ export function getItemVariants(itemKey: string): ItemVariantDef[] | undefined {
 export function checkVariant(itemKey: string, variantName: string): { ok: boolean; index?: number; def?: ItemVariantDef; reason?: string } {
   const variants = VARIANTS[itemKey];
   if (!variants) return { ok: false, reason: `item "${itemKey}" has no variants` };
-  const idx = variants.findIndex((v) => v.name.toLowerCase() === variantName.toLowerCase());
+  const vn = variantName.trim();
+  const idx = variants.findIndex((v) => {
+    if (v.name.toLowerCase() === vn.toLowerCase()) return true;
+    // LLM 回传中文变体标签（"简易驷马"）：剥注释后匹配
+    const cnBase = v.cn.replace(/[（(][^（）()]*[）)]/g, "").trim();
+    return cnBase === vn;
+  });
   if (idx < 0) return { ok: false, reason: `variant "${variantName}" not found for ${itemKey} (available: ${variants.map((v) => v.name).join(", ")})` };
   return { ok: true, index: idx, def: variants[idx] };
 }
@@ -1253,10 +1352,12 @@ export const LOCKS: Record<string, LockDef> = {
   },
 };
 
-/** 白名单中可上锁的道具（官方 Asset.AllowLock，2026-09-03 从 Female3DCG.js 提取对照）。
- *  绳子/布堵嘴/胶带/奶嘴等不可上锁——这是游戏设定。 */
+/** 白名单中可上锁的道具（官方 Asset.AllowLock，2026-09-03 从 Female3DCG.js 提取对照；09-08 vm 真实执行复核）。
+ *  绳子/布堵嘴/胶带/奶嘴等不可上锁——这是游戏设定。
+ *  电击玩具 ShockClamps/ShockDildo/ShockPlug 官方无 AllowLock（游戏设定不可锁）。 */
 const LOCKABLE_ITEMS = new Set([
   "ItemNeck/LeatherCollar", "ItemNeck/PetCollar", "ItemNeck/PostureCollar", "ItemNeck/HeartCollar",
+  "ItemNeck/ShockCollar", "ItemNeck/AutoShockCollar", "ItemNeck/PetSuitShockCollar",
   "ItemMouth/BallGag", "ItemMouth/BitGag", "ItemMouth/MuzzleGag",
   "ItemHead/LeatherBlindfold", "ItemHead/SmallBlindfold",
   "ItemArms/LeatherCuffs", "ItemArms/LeatherArmbinder", "ItemArms/LatexArmbinder",
@@ -1274,9 +1375,9 @@ export function checkLockable(group: string, name: string): boolean {
   return LOCKABLE_ITEMS.has(`${group}/${name}`);
 }
 
-/** 校验锁名（白名单内的 BOT 可用锁具） */
+/** 校验锁名（白名单内的 BOT 可用锁具；中文标签自动归一化，如"主人定时锁"） */
 export function checkLock(lockName: string): { ok: boolean; def?: LockDef; reason?: string } {
-  const def = LOCKS[lockName];
+  const def = LOCKS[normalizeLockKey(lockName)];
   if (!def) return { ok: false, reason: `lock "${lockName}" not in whitelist (${Object.keys(LOCKS).join(", ")})` };
   return { ok: true, def };
 }

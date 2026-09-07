@@ -604,8 +604,17 @@ export class BCClient {
   /**
    * 执行游戏动作（Activity）。对别人用 ChatOther 前缀（带 TargetCharacter 与部位），
    * 对自己用 ChatSelf 前缀。格式对照官方 Activity.js ActivityRun。
+   * activityAsset：手持道具类动作（RubItem/SpankItem/MasturbateItem…）必须带——官方
+   *   ActivityRun（Scripts_Activity.js:896）会把发送方 ItemHandheld 的道具打包成
+   *   {Tag:"ActivityAsset",AssetName,GroupName} 条目，接收端用它替换聊天行模板里的
+   *   ActivityAsset 占位符。不带就显示原文 "ActivityAsset"（2026-09-08 实机截图实锤）。
    */
-  sendActivity(name: string, zone: string, targetNo: number | null): void {
+  sendActivity(
+    name: string,
+    zone: string,
+    targetNo: number | null,
+    opts?: { activityAsset?: { name: string; group: string } }
+  ): void {
     const prefix = targetNo === null ? "ChatSelf" : "ChatOther";
     const dictionary: Array<Record<string, unknown>> = [
       { SourceCharacter: this._player.MemberNumber },
@@ -613,6 +622,13 @@ export class BCClient {
     if (targetNo !== null) {
       dictionary.push({ TargetCharacter: targetNo });
       dictionary.push({ Tag: "FocusAssetGroup", FocusGroupName: zone });
+    }
+    if (opts?.activityAsset) {
+      dictionary.push({
+        Tag: "ActivityAsset",
+        AssetName: opts.activityAsset.name,
+        GroupName: opts.activityAsset.group,
+      });
     }
     dictionary.push({ ActivityName: name });
     this.limiter.send(C2S.ChatRoomChat, {
@@ -714,6 +730,60 @@ export class BCClient {
     this.limiter.send(C2S.AccountUpdate, { ItemPermission: v });
     this._player.ItemPermission = v;
     console.log(`[permission] ItemPermission=${v}（${labels[v]}）`);
+  }
+
+  /** 改自己的昵称（全服显示，优先于注册名）。
+   *  服务器校验（Scripts_Server.js:18）：1-20 字符，Unicode 字母/数字/空格/引号/连字符——中文合法。 */
+  setNickname(nickname: string): void {
+    if (!/^[\p{L}\p{Nd}\p{Z}'\-]{1,20}$/u.test(nickname)) {
+      console.warn(`[nickname] "${nickname}" 不符合服务器规则（1-20 字符，仅字母/数字/空格/引号/连字符），跳过改名`);
+      return;
+    }
+
+    this.limiter.send(C2S.AccountUpdate, { Nickname: nickname });
+    this._player.Nickname = nickname;
+    console.log(`[nickname] Nickname 已设置：${nickname}`);
+  }
+
+  /** 改角色标签颜色（在聊天列表的头顶/聊天消息里的角色名旁显示）。
+   *  服务器校验（Scripts_Server.js:1423）：通过 CommonIsColor 验证，不合法回退 #ffffff。
+   *  BC 不接受 8 位 hex（带 alpha），只接受 #xxxxxx 6 位十六进制。 */
+  setLabelColor(color: string): void {
+    // 兼容 .env 写 #D5D633 时被 dotenv 误当注释，主动包了引号进来；剥掉外壳
+    const raw = color.trim().replace(/^["']|["']$/g, "");
+    const hex = raw.trim();
+    if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
+      console.warn(`[label-color] "${color}" 不符合 #xxxxxx 6 位 hex 格式，跳过`);
+      return;
+    }
+    this.limiter.send(C2S.AccountUpdate, { LabelColor: hex });
+    this._player.LabelColor = hex;
+    console.log(`[label-color] LabelColor 已设置：${hex}`);
+  }
+
+
+  /**
+   * 直接触发目标身上电击道具的电流（#84）。
+   * 照抄官方 PropertyShockPublishAction（Property.js:193）的消息格式——玩家点她项圈上
+   * "触发电击"按钮发的就是这条：Content=TriggerShock<level>，Type=Action，
+   * Dictionary 带 DestinationCharacterName + AssetName(项圈) + ShockIntensity + FocusAssetGroup。
+   * 接收端只看消息内容，不校验发送者是否持有遥控器（服务器哑巴中继，执法在接收端）。
+   */
+  sendShockAction(targetNo: number, level: number, assetName: string, group: string): void {
+    const clampedLevel = Math.max(1, Math.min(3, Math.floor(level)));
+    const nickname = this.nameOf(targetNo) ?? String(targetNo);
+    const dictionary: Array<Record<string, unknown>> = [
+      { Tag: "DestinationCharacterName", MemberNumber: targetNo, Text: nickname },
+      { Tag: "AssetName", AssetName: assetName, GroupName: group },
+      { ShockIntensity: clampedLevel * 1.5 },
+      { Tag: "FocusAssetGroup", FocusGroupName: group },
+    ];
+    this.limiter.send(C2S.ChatRoomChat, {
+      Content: `TriggerShock${clampedLevel}`,
+      Type: "Action",
+      Dictionary: dictionary,
+    });
+    console.log(`[shock] TriggerShock${clampedLevel} -> ${nickname}（${assetName}@${group}）`);
   }
 
   /**
