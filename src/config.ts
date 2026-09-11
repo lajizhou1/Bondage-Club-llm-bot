@@ -96,6 +96,24 @@ export interface Config {
   botItemPermission: number;
   botLabelColor: string;
   botNickname: string;
+  /** #89 BC+ 远程指令总开关（BCP_ENABLED，默认 true）。关掉=不理会也不发 BC+ 耳语指令 */
+  bcpEnabled: boolean;
+  /** #89 BC+ 启动自动自检（BCP_SELF_TEST，默认 true）：启动 60 秒后（她同房时）耳语一次 !bcp help
+   *  验证通道；收到回执后不再自动发。她没装 BC+ 时 BCX 可能回一句 Unknown command，故只自动做一次 */
+  bcpSelfTest: boolean;
+  /** #89 第二步「听懂层」（BCP_PULL_STATE，默认 true）：进房后主动向她索要一份完整 BC+ 公开数据
+   *  （宠物四项 / 她指派的人 / 规矩 / 诅咒）。BC+ 只在"自己进房"时广播全量，不主动要就可能一直收不到。
+   *  用官方握手包 `{SettingSync, settings:{}, reply:true}`——她客户端会定向回发自己的一份。 */
+  bcpPullState: boolean;
+  /** #89f 深度层「远程设置」的一次性启动指令（BCP_BOOT_SETTINGS）：
+   *  形如 `pet.shareStats=true`，多项用逗号分隔。进房后延迟执行一次，执行完日志确认后就可从 .env 删掉。
+   *  存在意义：BOT 没有 REPL，为了"现在就发一条命令"不用反复重启两轮——写这一行、重启、它就自己发。 */
+  bcpBootSettings: string;
+  /** #89g 口塞 ↔ 规矩自动对账（BCP_GAG_RULES，默认 true）：
+   *  BOT 主动给她戴上堵嘴道具时替她开 `speech.forbidOOC` + `speech.forbidEmotes`；
+   *  口塞一旦离身（BOT 摘 / 她自摘 / 挣脱滑脱 / 别人摘）就把**BOT 自己加的那几条**撤掉。
+   *  记账持久化在 data/gag-rules.json，重启后仍知道"哪几条是我加的"。 */
+  bcpGagRules: boolean;
   /** #71 一次性紧急解套：列出启动时要从 BOT 自身外观里脱掉的 Item* 道具名（仅清理列出的，不碰其他）
    *  留空=不清理。用法见下方实现注释。 */
   botEmergencyStrip: string[];
@@ -229,6 +247,12 @@ export const config: Config = {
   botLabelColor: process.env.BOT_LABEL_COLOR ?? "",
   /** BOT 对外昵称（#82 启动时改名；留空=不动）。服务器规则：1-20 字符，Unicode 中文合法 */
   botNickname: process.env.BOT_NICKNAME?.trim() ?? "",
+  /** #89 BC+ 集成开关（详见接口注释） */
+  bcpEnabled: toBool(process.env.BCP_ENABLED, true),
+  bcpSelfTest: toBool(process.env.BCP_SELF_TEST, true),
+  bcpPullState: toBool(process.env.BCP_PULL_STATE, true),
+  bcpBootSettings: (process.env.BCP_BOOT_SETTINGS ?? "").trim(),
+  bcpGagRules: toBool(process.env.BCP_GAG_RULES, true),
   /** #60 启动重穿总开关（详见 #60 节） */
   botOutfitOnStartup: toBool(process.env.BOT_OUTFIT_ON_STARTUP, true),
   /** #62 每次进房自动摆的姿势（详见接口注释） */

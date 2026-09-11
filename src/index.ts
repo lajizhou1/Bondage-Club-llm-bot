@@ -3,7 +3,10 @@ import * as anger from "./anger";
 import * as punishment from "./punishment";
 import * as intimacy from "./intimacy";
 import { BCClient, ItemChangeEvent } from "./client";
-import { generateIntents, extractMemories, llmEnabled, decideGohomeLimit, pickBestRoomFromCandidates, Intent, BrainContext } from "./brain";
+import { ASSET_EFFECTS } from "./asset-effects";
+import { generateIntents, extractMemories, llmEnabled, decideGohomeLimit, pickBestRoomFromCandidates, Intent, BrainContext, BCP_COMMANDS, BCP_EMOTICONS, canonicalBcpCommand, canonicalBcpEmoticon } from "./brain";
+import { ingestBcpEvent, getBcpState, describeBcpStatus } from "./bcp-state";
+import { findBcpRule, describeActiveRules, ruleCatalogForHumans } from "./bcp-rules";
 import { MemoryStore } from "./memory";
 import { GameManager, GameRule, GameTurnResult, RewardAction } from "./game";
 import { GameStateStore } from "./game-state";
@@ -821,6 +824,11 @@ async function runGohomeGame(): Promise<void> {
       console.log(`[gohome] 上无限期主人锁: ${entry.group}/${entry.name}`);
       await sleep(400);
     }
+
+    // #90 快照重穿接入口塞规矩：重穿不走 executeIntent，item_put 的钩子不会触发，这里显式对账。
+    //   · 快照里含堵嘴道具 = BOT 亲手给她戴上 → allowApply=true 补两条 BC+ 规矩；
+    //   · 阶段 1a 若脱下过"快照外"的口塞，同一轮对账也会把 BOT 加过的规矩撤掉（撤不看 allowApply）。
+    scheduleGagReconcile("gohome 快照重穿", true, 900);
     recentChat.push(`[游戏] 你已按记好的套装把她穿戴整齐，全部上了无限期主人锁（时间由你掌握：限时 ${state.limitMin} 分钟内她赢则提前全解，输了按规则罚锁、到点你亲手解）。`);
     if (recentChat.length > MAX_RECENT) recentChat.shift();
 
@@ -894,6 +902,9 @@ async function runGohomeGame(): Promise<void> {
     // 跨区会合后已在她的房里（跳过初始进房）；同区局正常进房
     let joinedRoom = alreadyInside ? busyRoom : await client.switchRoom(busyRoom!);
     if (joinedRoom) visitedRooms.add(joinedRoom);
+    // #90 转场落地、确认同房后再核一次口塞 ↔ 规矩——阶段 1 那次对账可能撞上切房/跨区会合
+    //   （读不到她的外观或不同房会跳过），这里在她和 BOT 确定同处一室时兜底补上。
+    scheduleGagReconcile("gohome 转场后对账", true, 1500);
     // 热闹度采样：进来听 sampleSec 秒，<2 个不同人发言就换下一间没去过的，最多试 roomAttempts 间
     let roomActive = false;
     // 尝试次数计数：被踢不占名额（2026-09-05 18:28 用户需求）——被房主机器人拒之门外
@@ -1252,6 +1263,9 @@ async function executePunishRelease(): Promise<void> {
     freed++;
     await sleep(450);
   }
+  // #90 刑满释放：束缚（含口塞）已被 BOT 亲手取下 → 撤掉 BOT 因口塞加过的两条 BC+ 规矩
+  //   （直发 sendItemUpdate，不走 item_remove 钩子，故在收尾处显式对账）
+  scheduleGagReconcile("gohome 惩罚刑满解除", false, 1200);
   console.log(`[gohome] 惩罚时间到：亲手解开并取下 ${freed} 件（她本人可自助解的兜底都没用上）`);
   client.sendWhisper(
     serveNo,
@@ -1295,6 +1309,8 @@ async function executeGohomeReward(serveNo: number): Promise<void> {
     clearTimeout(punishReleaseTimer);
     punishReleaseTimer = null;
   }
+  // #90 提前释放（胜利奖励）：束缚（含口塞）已被 BOT 亲手取下 → 撤掉 BOT 因口塞加过的两条规矩
+  scheduleGagReconcile("gohome 胜利解除", false, 1200);
   console.log(`[gohome] 胜利奖励：提前解开 ${freed} 件束缚`);
   if (config.intimacyEnabled) {
     intimacy.addIntimacy(config.gohomeWinIntimacy, "限时回家挑战成功");
@@ -2203,9 +2219,23 @@ const REFUSAL_TOKEN_PHRASES = [
   "行使拒绝",
 ];
 
-/** BOT 当前身份名（在登录后才是真实名字） */
+/** BOT 当前身份名（在登录后才是真实名字）。
+ *  #87 名字优先级：BOT_NAME 显式配置 > BOT_NICKNAME 声明 > 服务器当前 Nickname（对外昵称）
+ *  > 账号 Name > 登录用户名。
+ *  坑：BC 里 Name 是账号名（ljzsbot）、Nickname 才是昵称（绯星），而改昵称只写 Nickname 字段。
+ *  旧逻辑只读 Name → LLM 被告知 "Your name is ljzsbot"，她问「你叫什么」会答错。 */
 function botName(): string {
-  return config.botName ?? (client.player.Name as string | undefined) ?? config.bcUsername;
+  const candidates: Array<string | null | undefined> = [
+    config.botName,
+    config.botNickname,
+    client.player.Nickname as string | undefined,
+    client.player.Name as string | undefined,
+    config.bcUsername,
+  ];
+  for (const c of candidates) {
+    if (typeof c === "string" && c.trim()) return c;
+  }
+  return config.bcUsername;
 }
 
 /** 把 BOT 自己发出的内容也记进上下文，避免"失忆"导致前后矛盾 */
@@ -2573,6 +2603,12 @@ client.onRoomJoined = (roomName) => {
       console.warn(`[pose] BOT_JOIN_POSE="${config.botJoinPose}" 不在姿势白名单，跳过（可选：StandUp/Kneel/KneelingSpread/Yoked/OverTheHead/BackBoxTie/BackCuffs/LegsClosed/AllFours）`);
     }
   }
+  // #89 第二步「听懂层」：进房后 5 秒向她索要一份 BC+ 公开数据（宠物四项/她指派的人/规矩/诅咒）。
+  //   为什么不是等她广播：BC+ 只在"自己进房"那一刻发全量，BOT 后进房就永远收不到那份 SettingSync。
+  //   延迟 5 秒是为了让房间同步完成（BC+ 自己也是等 ChatRoomSync 之后才发）。
+  setTimeout(() => requestBcpState("进房后"), 5000);
+  // #89f 一次性启动下发（BCP_BOOT_SETTINGS）——比拉状态晚一点，确保她的 BC+ 已就位
+  setTimeout(() => runBootBcpSettings("进房后一次性"), 9000);
 };
 
 // #16 限时回家：服务对象进了 BOT 所在的房间 = 候选"到家"事件（限等待期，到家判定看 gohomeCheckArrival）
@@ -2602,6 +2638,8 @@ client.onMemberJoin = (memberNo) => {
   }
   const serveNo = serveMemberNumber();
   if (serveNo === null || memberNo !== serveNo) return;
+  // #90 她进房：核一次口塞 ↔ 规矩——她可能在外面摘了口塞/挣脱了，BOT 不在场没撤到
+  setTimeout(() => scheduleGagReconcile("她进房对账", false), 4000);
   // #63 主动模式：她进房且窗口开着 → 状态突变即时感知（不用等下一个定时 tick）。
   //   延迟 8s：等房间同步/她安顿下来，也避开 pendingRespondTimer 排队期。
   if (config.proactiveEnabled && proactiveIsOpen()) {
@@ -2905,6 +2943,52 @@ client.onChat = async (event) => {
       console.log("[memory] wiped by serve target");
       return;
     }
+    // #89 BC+ 通道自检口令：验证「她装了 BC+ + 同房 + BOT 在其权限里」整条链路（只握手，无副作用）
+    if (config.bcpEnabled && /BCP\s*(通道)?\s*自检|bcp\s*self\s*test/i.test(content)) {
+      runBcpSelfTest("口令触发");
+      return;
+    }
+    // #89 BC+ 真命令口令：BCP命令 kneel / BCP命令 emoticon Hearts / BCP命令 say 我很乖
+    //   与自检的区别：这是**端到端真操作**——命令在她客户端就地执行（她会真的跪下/闭眼），
+    //   结果以定向 action 回执（BC+: Command "Kneel" executed.）回到这里。
+    const bcpOrder = config.bcpEnabled ? parseBcpOrderCommand(content) : null;
+    if (bcpOrder) {
+      runBcpOrder(bcpOrder.command, bcpOrder.arg, "口令触发");
+      return;
+    }
+    // #89e BC+ 规矩口令：BCP规矩（列清单）/ BCP规矩 不许私聊 / BCP规矩 剥夺视觉 开 确认
+    //   与 BCP命令 的区别：命令是一次性的，规矩是**持续装在她客户端上的限制**，她的游戏自己执法。
+    if (config.bcpEnabled && /^\s*(?:BCP\s*规矩|bcp\s*rule)\s*$/i.test(content.trim())) {
+      client.sendChat(`[BCP] 规矩清单（只列我们能下的）——\n${ruleCatalogForHumans()}\n用法：BCP规矩 <名字> 开/关；重度档要加「确认」`);
+      return;
+    }
+    const bcpRule = config.bcpEnabled ? parseBcpRuleCommand(content) : null;
+    if (bcpRule) {
+      runBcpRule(bcpRule.key, bcpRule.on, bcpRule.confirm, "口令触发");
+      return;
+    }
+    // #89f BC+ 远程设置口令：直接改她客户端的模块设置项
+    //   例：`BCP设置 pet shareStats true` / 简写 `BCP宠物共享 开`
+    //   注意：只能改模块**内部**的设置；整只模块的开关 BC+ 不提供远程通道（只能她本人点）。
+    const bcpSetting = config.bcpEnabled ? parseBcpSettingCommand(content) : null;
+    if (bcpSetting) {
+      runBcpSetting(bcpSetting.module, bcpSetting.name, bcpSetting.value, "口令触发");
+      return;
+    }
+    // #89 第二步「听懂层」诊断口令：BCP状态 —— 直接把她客户端广播过来的 BC+ 数据播报到聊天里。
+    //   没数据就先向她索要一份（5 秒后再问一次就有了）。这是验证"听懂层"最直观的入口。
+    if (config.bcpEnabled && /BCP\s*(状态|数据)|bcp\s*status/i.test(content)) {
+      const bcpServeNo = serveMemberNumber();
+      const summary =
+        bcpServeNo !== null ? describeBcpStatus(getBcpState(bcpServeNo), (no) => client.nameOf(no)) : "";
+      if (summary) {
+        client.sendChat(`[BCP状态] ${summary.replace(/\n/g, "　｜　")}`);
+      } else {
+        client.sendChat("[BCP状态] 我手上还没有她的数据，已经向她重新要了一份——等几秒再问我一次。");
+        requestBcpState("口令触发");
+      }
+      return;
+    }
     // #16 套装快照口令：束缚由用户设计、BOT 记住
     if (/记住这身|记住这身束缚|记住这个套装/.test(content)) {
       const serveNo0 = serveMemberNumber();
@@ -3107,6 +3191,624 @@ client.onChat = async (event) => {
 
   await respond(isServe);
 };
+
+// ============ #89 BC+（Seles84/bc-plus）通道 ============
+// 她能隔着客户端执行 BOT 下的一次性指令（耳语 !bcp 通道）。第一步只上"安全项"：
+// kneel/stand/closeEyes/openEyes/emoticon。诊断入口=口令「BCP自检」或启动自检。
+let bcpReplySeen = false;
+let bcpSelfTestTimer: NodeJS.Timeout | null = null;
+let bcpAutoTestDone = false;
+/** 正在等待回执的真命令（用于回执日志标注 + 超时告警） */
+let bcpOrderWait: { command: string; at: number } | null = null;
+/** 正在等待回执的规矩下发（同上） */
+let bcpRuleWait: { rule: string; label: string; at: number } | null = null;
+/** C 档（重度）规矩的待确认项——必须同一条 + 60 秒内才认 */
+let bcpRulePending: { rule: string; at: number } | null = null;
+/** 正在等待回执的远程设置下发（同上） */
+let bcpSettingWait: { label: string; at: number } | null = null;
+
+/**
+ * #89f BC+ 深度层——远程设置（SettingCommand）白名单。
+ *
+ * BC+ 的 `SettingCommand` 能远程改**她客户端某个模块的设置项**（不是整只模块）。
+ * 通路：BOT 发 `{message:"SettingCommand", module, name, value}` 定向给她 →
+ * 她的 DataSync.onSettingCommand 校验（模块 SupportsRemote + EditPermission + 值的类型）
+ * → 回 `{message:"SettingCommandResult", ok, reason?}`。
+ *
+ * 两点必须记住：
+ * ① BC+ **没有**远程开关「整只模块」的通道（模块 Active 只能她本人在面板点）。
+ *    所以模块关掉时，这里也救不回来——只能改模块**内部**的设置项。
+ * ② 宠物模块的公开墓碑 `{shareStats:false}` 在「模块关了」和「共享勾关了」两种
+ *    情况下长得一模一样（源码注释明说 off 时也广播），所以分辨办法是：发一次
+ *    shareStats=true，看广播是否变回 `{shareStats:true,levels}`——变了就是勾，没变就是模块。
+ *
+ * 白名单按「改错了也不伤人」的原则收窄：只放共享/显示类，不放会影响她玩法的项。
+ */
+const BCP_SETTING_WHITELIST: Record<string, Record<string, { zh: string }>> = {
+  pet: {
+    shareStats: { zh: "共享宠物数据（让房间里的人看得见她的饥饿/口渴/睡眠/亲密）" },
+    // isPet() = 模块Active && bePet!==false —— 宠物身份的第二个开关
+    bePet: { zh: "把自己设为宠物（开启宠物身份）" },
+  },
+  core: {
+    // Core 的模块总开关（module.<slug>）。只放「开」不放「关」——见 runBcpSetting 里的硬限制，
+    // 防止误关 rules/contracts 这类执法模块。
+    // 【2026-09-11 实测】发这个过去 BC+ 0.12.0 直接回 `not editable`——Core 模块没有 override
+    // SupportsRemote（基类默认 false），所以模块总开关根本递不进去。留着是留档 + 等 BC+ 以后开放；
+    // 当前真要开模块，只能她本人在 BC+ 面板里点。
+    "module.pet": { zh: "开启宠物模块（整只模块的总开关）——BC+ 当前不允许远程改" },
+  },
+};
+
+/** 白名单铺平成 "pet.shareStats" 这种给人看的字符串 */
+function bcpSettingCatalog(): string {
+  return Object.entries(BCP_SETTING_WHITELIST)
+    .flatMap(([m, items]) => Object.keys(items).map((s) => `${m}.${s}`))
+    .join(" / ");
+}
+
+/**
+ * 解析「BCP规矩 <规矩|中文名> [开|关] [确认]」口令（服务对象专属）。
+ * 例：`BCP规矩 不许私聊 开` / `BCP规矩 body.forceKneel` / `BCP规矩 剥夺视觉 开 确认`。
+ * 返回 null = 不是这个口令。
+ */
+function parseBcpRuleCommand(text: string): { key: string; on: boolean; confirm: boolean } | null {
+  let body = text.trim();
+  let confirm = false;
+  const confirmTail = /[\s,，]确认\s*$/i.exec(body);
+  if (confirmTail) {
+    confirm = true;
+    body = body.slice(0, confirmTail.index).trim();
+  }
+  const m = /^(?:BCP\s*规矩|bcp\s*rule)\s+(.+)$/i.exec(body);
+  if (!m) return null;
+  let key = m[1].trim();
+  let on = true;
+  const tail = /[\s,，]+(开|关|on|off)\s*$/i.exec(key);
+  if (tail) {
+    on = !/^(关|off)$/i.test(tail[1]);
+    key = key.slice(0, tail.index).trim();
+  }
+  return key.length > 0 ? { key, on, confirm } : null;
+}
+
+/**
+ * #89e BC+ 规矩下发（深度层）。规矩不是一次性命令——它是**装在她客户端上的持续限制**，
+ * 她的游戏自己会执法（她真的打不出私聊、真的站不起来），直到 BOT 撤掉。
+ *
+ * 分档（见 bcp-rules.ts）：
+ *   A 档 = 只约束表达，可直接下；C 档 = 会限制自由/拿走能力，**必须带「确认」**；X 档 = 红线，永不发。
+ */
+function runBcpRule(rawKey: string, on: boolean, confirm: boolean, reason: string): void {
+  const serveNo = serveMemberNumber();
+  if (serveNo === null) {
+    console.log(`[bcp] 规矩跳过（${reason}）：服务对象未识别（不在线/未登录）`);
+    return;
+  }
+  const def = findBcpRule(rawKey);
+  if (!def) {
+    console.log(`[bcp] 规矩认不出（${reason}）："${rawKey}"`);
+    client.sendChat(`[BCP] 认不出「${rawKey}」这条规矩。发「BCP规矩」看清单。`);
+    return;
+  }
+  if (def.tier === "X") {
+    console.log(`[bcp] 规矩拒绝（${reason}）：「${def.zh}」是硬红线，永不开放`);
+    client.sendChat(`[BCP] 这条是红线，我不会碰。`);
+    return;
+  }
+  // C 档二次确认：她会失去某种能力，必须她自己点头（同一条 + 60 秒内）
+  if (def.tier === "C" && !confirm) {
+    bcpRulePending = { rule: def.id, at: Date.now() };
+    console.log(`[bcp] 规矩待确认（${reason}）：「${def.zh}」属重度档，等她确认`);
+    client.sendChat(
+      `[BCP]「${def.zh}」是重度规矩——会真的限制她的自由。确认要下就发：BCP规矩 ${def.zh} ${on ? "开" : "关"} 确认`
+    );
+    return;
+  }
+  if (def.tier === "C" && confirm) {
+    const fresh = bcpRulePending && bcpRulePending.rule === def.id && Date.now() - bcpRulePending.at < 60000;
+    if (!fresh) {
+      console.log(`[bcp] 规矩确认失效（${reason}）：「${def.zh}」没有匹配的待确认项`);
+      client.sendChat(`[BCP] 确认超时或对不上，重新发一次：BCP规矩 ${def.zh} ${on ? "开" : "关"} 确认`);
+      return;
+    }
+    bcpRulePending = null;
+  }
+  if (!client.isMemberInRoom(serveNo)) {
+    console.log(`[bcp] 规矩拒绝（${reason}）：${client.nameOf(serveNo)} 不在同一房间（BC+ 要求同房）`);
+    client.sendChat(`[BCP] ${client.nameOf(serveNo)} 不在这个房间，规矩递不过去。`);
+    return;
+  }
+  client.sendBCPMessage({ message: "RuleCommand", action: "setActive", rule: def.id, value: on }, serveNo);
+  const label = `${def.zh}（${def.id}）${on ? "开" : "关"}`;
+  console.log(`[bcp] 下发规矩（${reason}）：${label} -> ${client.nameOf(serveNo)}——等回执…`);
+  bcpRuleWait = { rule: def.id, label, at: Date.now() };
+  setTimeout(() => {
+    if (bcpRuleWait && bcpRuleWait.rule === def.id && Date.now() - bcpRuleWait.at >= 8000) {
+      console.log(
+        `[bcp] ⚠ 规矩「${bcpRuleWait.label}」8 秒内无回执——可能：①她没装/没开 BC+ ②不在同房 ③她的预设是 Dominant（规矩编辑会被整条拒） ④权限不足`
+      );
+      bcpRuleWait = null;
+    }
+  }, 8000);
+}
+
+/**
+ * #90 口塞 ↔ 规矩自动对账（戴上加 / 取下撤 / 挣脱也撤）
+ *
+ * BOT 每次给服务对象戴上「会堵嘴」的道具，顺手替她开这两条 BC+ 规矩——她的客户端自己执法：
+ * 嘴被堵着还跳出来说 OOC、比划表情动作，会被当场拦下。口塞一旦离身（BOT 摘 / 她自摘 /
+ * 挣扎挣脱滑脱 / 别人摘走），就把**BOT 自己加的那几条**撤回去，省得她再手动关一遍。
+ *
+ * 判定用**资产级 Effect 表**（ASSET_EFFECTS 的 Gag*），而不是只看 ItemMouth 槽，
+ * 这样口球 / 马具口球 / 袜子堵嘴 / 狗头套 / 牛奶罐……凡是堵嘴的都算进来。
+ * 实测（09-11）：ItemMouth 系列 125 个道具无一例外全带 Gag 效果，无漏网也无误伤。
+ *
+ * 三条硬约束（09-11 用户拍板"摘口塞自动撤 + 挣脱也撤，减少她的操作量"后定）：
+ *  ① **只撤自己下的那几条**——`gagRulesByBot` 逐个记账，她自己本来就开着的规矩绝不动；
+ *  ② **记账持久化**到 data/gag-rules.json，BOT 重启后仍知道"这两条是我因口塞加的"；
+ *  ③ **读不到外观就什么都不做**——`getAppearance()` 返回 null 时一律跳过，绝不能把
+ *     "读不到"误判成"没戴"从而误撤（撤销类逻辑最容易踩的坑，见 #71 的血泪）。
+ *  ④ **口径：只有 BOT 亲手戴上才补**——LLM 的 item_put（allowApply=true）与 gohome 快照重穿
+ *     （游戏编排器直发 sendItemUpdate，不走 executeIntent，需显式对账）都算"BOT 亲手"；
+ *     服务对象自己戴/摘一律只撤不补（走 onItemChange，allowApply=false）。
+ *     挂钩点：item_put / item_remove / onItemChange / 她进房 / gohome 重穿与收场解除。
+ */
+const GAG_AUTO_RULES: readonly string[] = ["speech.forbidOOC", "speech.forbidEmotes"];
+
+/** BOT 因口塞实际下发过的规矩 id（撤销白名单：只撤这里的，不碰她自己开的） */
+const gagRulesByBot = new Set<string>();
+
+const GAG_RULES_FILE = path.resolve(__dirname, "..", "data", "gag-rules.json");
+
+/** 读回「上次 BOT 因口塞加过哪些规矩」（重启自愈；文件不存在/损坏按空处理） */
+function loadGagRulesByBot(): void {
+  try {
+    if (!fs.existsSync(GAG_RULES_FILE)) return;
+    const raw = JSON.parse(fs.readFileSync(GAG_RULES_FILE, "utf-8")) as { rules?: unknown };
+    if (Array.isArray(raw.rules)) {
+      for (const r of raw.rules) if (typeof r === "string") gagRulesByBot.add(r);
+    }
+    if (gagRulesByBot.size > 0) {
+      console.log(`[bcp] 口塞规矩记账已恢复：${[...gagRulesByBot].join(" / ")}（摘口塞时会自动撤）`);
+    }
+  } catch (e) {
+    console.warn(`[bcp] 口塞规矩记账读取失败（按空处理）：${String(e)}`);
+  }
+}
+
+function saveGagRulesByBot(): void {
+  try {
+    fs.mkdirSync(path.dirname(GAG_RULES_FILE), { recursive: true });
+    fs.writeFileSync(GAG_RULES_FILE, JSON.stringify({ rules: [...gagRulesByBot] }, null, 1), "utf-8");
+  } catch (e) {
+    console.warn(`[bcp] 口塞规矩记账写入失败：${String(e)}`);
+  }
+}
+
+/** 该道具是否会让佩戴者说不了话（资产级 Gag 效果；变体级 Effect 不在此表） */
+function isGagAsset(group: string, name: string): boolean {
+  const effs = ASSET_EFFECTS[`${group}/${name}`];
+  return Array.isArray(effs) && effs.some((e) => e.startsWith("Gag"));
+}
+
+/**
+ * 扫她全身，返回第一件堵嘴道具。
+ *   `{ group, name }` = 确实戴着；`null` = 明确没戴；`undefined` = **读不到外观**（调用方必须跳过，不能当"没戴"）
+ */
+function detectServeGag(serveNo: number): { group: string; name: string } | null | undefined {
+  const appearance = client.getAppearance(serveNo);
+  if (!appearance) return undefined;
+  for (const raw of appearance) {
+    const e = raw as { Group?: string; Name?: string };
+    if (e.Group && e.Name && isGagAsset(e.Group, e.Name)) return { group: e.Group, name: e.Name };
+  }
+  return null;
+}
+
+/** 同一条动作链的重复对账合并（连戴多个槽 / 同步抖动只跑一轮；allowApply 取并集） */
+let gagReconcileTimer: NodeJS.Timeout | null = null;
+let gagReconcilePendingApply = false;
+let gagReconcilePendingReason = "";
+
+/**
+ * 排一次对账。默认延迟 700ms——等她的外观同步落地再读，否则容易读到上一帧。
+ * `allowApply=true` 只应该由「BOT 亲手给她戴上」这条路径传（其余一律只撤不补）。
+ */
+function scheduleGagReconcile(reason: string, allowApply: boolean, delay = 700): void {
+  if (!config.bcpEnabled || !config.bcpGagRules) return;
+  if (gagReconcileTimer) {
+    clearTimeout(gagReconcileTimer);
+    if (allowApply) gagReconcilePendingApply = true;
+  } else {
+    gagReconcilePendingApply = allowApply;
+  }
+  gagReconcilePendingReason = reason;
+  gagReconcileTimer = setTimeout(() => {
+    gagReconcileTimer = null;
+    const apply = gagReconcilePendingApply;
+    const why = gagReconcilePendingReason;
+    gagReconcilePendingApply = false;
+    reconcileGagRules(why, apply);
+  }, delay);
+}
+
+/**
+ * 口塞 ↔ 规矩对账（幂等，可安全重复调用）：
+ *   戴着 → 补上缺的那几条（仅 `allowApply=true`，即"BOT 亲手戴"）；实际下发的记进账。
+ *   没戴 → 把「BOT 加过的」还开着的撤掉（不看 allowApply——口塞都离身了就该撤）。
+ *
+ * 「BOT 加过的」判定**优先用她客户端广播的 `addedBy.member === BOT`**（权威：连旧版遗留、
+ * 账本丢失的场景都能判对），广播里还没有 addedBy 时才退回本地账本。
+ */
+function reconcileGagRules(reason: string, allowApply: boolean): void {
+  if (!config.bcpEnabled || !config.bcpGagRules) return;
+  const serveNo = serveMemberNumber();
+  if (serveNo === null) return;
+  if (!client.isMemberInRoom(serveNo)) {
+    console.log(`[bcp] 口塞规矩对账跳过（${reason}）：她不在同一房间（BC+ 要求同房）`);
+    return;
+  }
+  const worn = detectServeGag(serveNo);
+  if (worn === undefined) {
+    console.log(`[bcp] 口塞规矩对账跳过（${reason}）：读不到她的外观缓存（不敢当"没戴"，避免误撤）`);
+    return;
+  }
+  const st = getBcpState(serveNo);
+  const active = new Set(st?.activeRules ?? []);
+  const who = client.nameOf(serveNo);
+  const botNo = client.player.MemberNumber ?? -1;
+
+  // ---- 「这两条里哪些是 BOT 加的」：广播的 addedBy 权威，本地账本兜底 ----
+  const addedBy = st?.ruleAddedBy ?? {};
+  const hasOrigin = GAG_AUTO_RULES.some((id) => addedBy[id] !== undefined);
+  const ownedByBot = new Set<string>(
+    hasOrigin
+      ? GAG_AUTO_RULES.filter((id) => addedBy[id] === botNo)
+      : [...gagRulesByBot].filter((id) => GAG_AUTO_RULES.includes(id))
+  );
+  // 账本与事实对齐（只记这两条，只记 BOT 加的；她自己开的那条永远不入账）
+  let ledgerChanged = false;
+  for (const id of GAG_AUTO_RULES) {
+    const should = ownedByBot.has(id);
+    if (should !== gagRulesByBot.has(id)) {
+      if (should) gagRulesByBot.add(id);
+      else gagRulesByBot.delete(id);
+      ledgerChanged = true;
+    }
+  }
+
+  if (worn === null) {
+    // ---- 口塞已离身（BOT 摘 / 她自摘 / 挣脱滑脱 / 别人摘）：撤掉 BOT 自己加过的 ----
+    const todo = [...ownedByBot].filter((id) => active.has(id));
+    for (const id of todo) gagRulesByBot.delete(id); // 先销账再发，避免重复触发时重复撤
+    if (ledgerChanged || todo.length > 0) saveGagRulesByBot();
+    if (todo.length === 0) return;
+    console.log(`[bcp] 口塞已离身（${reason}）：撤回 ${todo.length} 条 BOT 加过的规矩 → ${who}`);
+    todo.forEach((id, i) => {
+      setTimeout(() => {
+        client.sendBCPMessage({ message: "RuleCommand", action: "setActive", rule: id, value: false }, serveNo);
+        const def = findBcpRule(id);
+        console.log(`[bcp] 口塞规矩已撤（${reason}）：${def?.zh ?? id}（${id}）`);
+      }, i * 400);
+    });
+    return;
+  }
+
+  // ---- 口塞还在身上：只有「BOT 亲手戴」才补规矩 ----
+  if (ledgerChanged) saveGagRulesByBot();
+  if (!allowApply) return;
+  const todo = GAG_AUTO_RULES.filter((id) => !active.has(id));
+  if (todo.length === 0) {
+    console.log(`[bcp] 口塞规矩已在位，无需补（${reason}）`);
+    return;
+  }
+  for (const id of todo) gagRulesByBot.add(id); // 先记账落盘（发送前），撤销才不会漏
+  saveGagRulesByBot();
+  console.log(`[bcp] 口塞规矩下发（${reason}）：${todo.length} 条 → ${who}`);
+  todo.forEach((id, i) => {
+    setTimeout(() => {
+      // 守卫：错开的这几百毫秒里她可能已经把口塞摘了/挣脱了，那就别补
+      if (detectServeGag(serveNo) === null) {
+        console.log(`[bcp] 口塞规矩下发取消（${id}）：这期间口塞已离身`);
+        return;
+      }
+      client.sendBCPMessage({ message: "RuleCommand", action: "setActive", rule: id, value: true }, serveNo);
+      const def = findBcpRule(id);
+      console.log(`[bcp] 口塞规矩已下发（${reason}）：${def?.zh ?? id}（${id}）`);
+    }, i * 400);
+  });
+}
+
+/**
+ * 解析远程设置口令（服务对象专属）。
+ *   `BCP设置 pet shareStats true`（也认 `pet.shareStats=true` 与 开/关）
+ *   简写 `BCP宠物共享 开`
+ * 返回 null = 不是这个口令。
+ */
+function parseBcpSettingCommand(text: string): { module: string; name: string; value: boolean } | null {
+  const t = text.trim();
+  // 简写：BCP宠物共享 [开|关]（不写默认开）
+  const quick = /^(?:BCP\s*宠物共享|bcp\s*petshare)(?:\s+(开|关|on|off|true|false))?\s*$/i.exec(t);
+  if (quick) {
+    const raw = quick[1];
+    return { module: "pet", name: "shareStats", value: raw === undefined ? true : /^(开|on|true)$/i.test(raw) };
+  }
+  // 设置名允许带点（Core 的模块总开关叫 `module.pet`）
+  const m = /^(?:BCP\s*设置|bcp\s*setting)\s+([A-Za-z][A-Za-z0-9_]*)\s*[.\s]\s*([A-Za-z][A-Za-z0-9_.]*)\s*(?:[=\s]\s*(true|false|开|关|on|off))?\s*$/i.exec(t);
+  if (!m) return null;
+  const raw = m[3];
+  return {
+    module: m[1]!.toLowerCase(),
+    name: m[2]!,
+    value: raw === undefined ? true : /^(true|开|on)$/i.test(raw),
+  };
+}
+
+/**
+ * #89f BC+ 远程设置下发（深度层）。改的是**她客户端上的设置项**，她的 BC+ 自己存盘，
+ * 不是 BOT 这边的镜像状态。白名单守门 + 同房前置检查 + 8 秒无回执告警（同规矩那套）。
+ */
+function runBcpSetting(module: string, name: string, value: boolean, reason: string): void {
+  const mod = module.trim().toLowerCase();
+  const items = BCP_SETTING_WHITELIST[mod];
+  if (!items || !(name in items)) {
+    console.log(`[bcp] 设置拒绝（${reason}）：${mod}.${name} 不在白名单`);
+    client.sendChat(`[BCP] 我只改这几个设置：${bcpSettingCatalog()}`);
+    return;
+  }
+  // 模块总开关类（core.module.*）只允许打开：关掉模块会静默卸掉它的执法能力
+  if (mod === "core" && value === false) {
+    console.log(`[bcp] 设置拒绝（${reason}）：模块总开关只允许打开，不许关（${mod}.${name}）`);
+    client.sendChat("[BCP] 模块总开关我只能开、不能关——要关请她自己点。");
+    return;
+  }
+  const serveNo = serveMemberNumber();
+  if (serveNo === null) {
+    console.log(`[bcp] 设置跳过（${reason}）：服务对象未识别（不在线/未登录）`);
+    return;
+  }
+  if (!client.isMemberInRoom(serveNo)) {
+    console.log(`[bcp] 设置拒绝（${reason}）：${client.nameOf(serveNo)} 不在同一房间（BC+ 要求同房）`);
+    client.sendChat(`[BCP] ${client.nameOf(serveNo)} 不在这个房间，设置递不过去。`);
+    return;
+  }
+  client.sendBCPMessage({ message: "SettingCommand", module: mod, name, value }, serveNo);
+  const label = `${mod}.${name}=${value}`;
+  console.log(`[bcp] 下发设置（${reason}）：${items[name]!.zh} ${label} -> ${client.nameOf(serveNo)}——等回执…`);
+  bcpSettingWait = { label, at: Date.now() };
+  setTimeout(() => {
+    if (bcpSettingWait && bcpSettingWait.label === label && Date.now() - bcpSettingWait.at >= 8000) {
+      console.log(
+        `[bcp] ⚠ 设置「${label}」8 秒内无回执——可能：①她没装/没开 BC+ ②不在同房 ③权限不足（改宠物设置默认要 Owner）`
+      );
+      bcpSettingWait = null;
+    }
+  }, 8000);
+}
+
+/**
+ * 启动一次性下发（BCP_BOOT_SETTINGS）：格式 `pet.shareStats=true`，逗号分隔多项。
+ * 纯粹为了"临时让它发一条命令"不用人肉打字——发完就把 .env 那行删掉。
+ */
+function runBootBcpSettings(reason: string): void {
+  if (!config.bcpEnabled) return;
+  const spec = config.bcpBootSettings;
+  if (!spec) return;
+  for (const item of spec.split(",")) {
+    const m = /^\s*([A-Za-z][A-Za-z0-9_]*)\s*[.\s]\s*([A-Za-z][A-Za-z0-9_.]*)\s*=\s*(true|false|开|关|on|off)\s*$/i.exec(item);
+    if (!m) {
+      console.log(`[bcp] 启动设置格式认不出："${item.trim()}"（应形如 pet.shareStats=true）`);
+      continue;
+    }
+    runBcpSetting(m[1]!, m[2]!, /^(true|开|on)$/i.test(m[3]!), reason);
+  }
+}
+
+/**
+ * 解析「BCP命令 <id> [参数]」口令（服务对象专属）。
+ * 例：`BCP命令 kneel` / `BCP命令 emoticon Hearts`。返回 null = 不是这个口令。
+ */
+function parseBcpOrderCommand(text: string): { command: string; arg?: string } | null {
+  const m = /^\s*(?:BCP\s*(?:命令|指令)|bcp\s*cmd)\s+([A-Za-z]+)(?:\s+([\s\S]+?))?\s*$/i.exec(text.trim());
+  if (!m) return null;
+  const command = (m[1] ?? "").toLowerCase();
+  const arg = (m[2] ?? "").trim();
+  return { command, arg: arg.length > 0 ? arg : undefined };
+}
+
+/**
+ * #89 BC+ 真命令下发（端到端）：把一条白名单命令耳语给服务对象，
+ * 她的 BC+ 客户端就地执行（真的跪下/闭眼/换表情），结果以定向 action 回执回来
+ * （`BC+: Command "Kneel" executed.`，由 client.onBCPMessage 打 ✅ 日志）。
+ *
+ * 前置条件：同房（BC+ 用 FindCharacterInRoom 校验发送者）+ 她在 BOT 的 Authority 里够权限
+ * （BOT 是她的 Owner → 天然最高级）。
+ */
+function runBcpOrder(rawCommand: string, arg: string | undefined, reason: string): void {
+  const serveNo = serveMemberNumber();
+  if (serveNo === null) {
+    console.log(`[bcp] 命令跳过（${reason}）：服务对象未识别（不在线/未登录）`);
+    return;
+  }
+  // 命令名大小写不敏感归一（实测坑：closeEyes 写成 closeeyes 曾被判非法白名单拒绝）
+  const command = canonicalBcpCommand(rawCommand);
+  if (!command) {
+    console.log(`[bcp] 命令拒绝（${reason}）："${rawCommand}" 不在安全白名单（${BCP_COMMANDS.join(" / ")}）`);
+    client.sendChat(`[BCP] 我只下这几个命令：${BCP_COMMANDS.join(" / ")}。`);
+    return;
+  }
+  if (command === "emoticon") {
+    const want = arg ?? "";
+    const hit = canonicalBcpEmoticon(want);
+    if (!hit) {
+      console.log(`[bcp] emoticon 参数非法 "${want}"`);
+      client.sendChat(`[BCP] 表情从这些里挑：${BCP_EMOTICONS.join(" / ")}`);
+      return;
+    }
+    arg = hit;
+  } else {
+    arg = undefined; // 其余白名单命令不接受参数
+  }
+  if (!client.isMemberInRoom(serveNo)) {
+    console.log(`[bcp] 命令拒绝（${reason}）：${client.nameOf(serveNo)} 不在同一房间（BC+ 要求同房）`);
+    client.sendChat(`[BCP] ${client.nameOf(serveNo)} 不在这个房间，命令递不过去——等我找到她再说。`);
+    return;
+  }
+  const label = `${command}${arg ? " " + arg : ""}`;
+  client.sendBCPWhisper(serveNo, command, arg ?? "");
+  console.log(`[bcp] 下发命令（${reason}）：!bcp ${label} -> ${client.nameOf(serveNo)}（#${serveNo}）——等回执…`);
+  bcpOrderWait = { command: label, at: Date.now() };
+  setTimeout(() => {
+    if (bcpOrderWait && Date.now() - bcpOrderWait.at >= 8000) {
+      console.log(
+        `[bcp] ⚠ 命令 "${bcpOrderWait.command}" 8 秒内无回执——可能：①她没装/没开 BC+ ②她刚离开房间 ③BOT 被她拒绝（权限/黑名单）`
+      );
+      bcpOrderWait = null;
+    }
+  }, 8000);
+}
+
+/**
+ * #89 第二步「听懂层」：向她**主动索要**一份完整的 BC+ 公开数据。
+ *
+ * 为什么需要主动要：BC+ 只在「自己进房」那一刻广播全量（DataSync.ts:162 `ChatRoomSync` hook），
+ * 所以 BOT 后进房、她先进房的情况下，BOT 收不到她的 SettingSync（只有数据变化时才偶发 CategorySync）。
+ *
+ * 借用的是 BC+ 官方握手机制（DataSync.ts:211）：收到 `reply === true` 的 SettingSync 就**定向回发**
+ * 自己的一份。我们发 `{settings:{}, reply:true}` 给她 → 她的客户端把 BOT 记成一个"没有公开数据的
+ * BC+ 用户"（无害），然后定向把她的全量数据回给 BOT。发送方不需要真的装 BC+。
+ */
+const BCP_HANDSHAKE_VERSION = "0.12.0";
+function requestBcpState(reason: string): void {
+  if (!config.bcpEnabled || !config.bcpPullState) return;
+  const serveNo = serveMemberNumber();
+  if (serveNo === null) {
+    console.log(`[bcp] 拉取跳过（${reason}）：服务对象未识别`);
+    return;
+  }
+  if (!client.isMemberInRoom(serveNo)) {
+    console.log(`[bcp] 拉取跳过（${reason}）：${client.nameOf(serveNo)} 不在同一房间（BC+ 要求同房）`);
+    return;
+  }
+  client.sendBCPMessage(
+    { message: "SettingSync", version: BCP_HANDSHAKE_VERSION, settings: {}, reply: true },
+    serveNo
+  );
+  console.log(`[bcp] 已向她索要 BC+ 公开数据（${reason}）——等她定向回发…`);
+}
+
+/**
+ * BC+ 通道自检：耳语 `!bcp help`，等她的客户端回执。
+ * 收到回执 = 链路通（她装了 BC+ + 同房 + BOT 在其权限里）；超时 = 上述条件有任一不满足。
+ */
+function runBcpSelfTest(reason: string): void {
+  const serveNo = serveMemberNumber();
+  if (serveNo === null) {
+    console.log(`[bcp] 自检跳过（${reason}）：服务对象未识别（不在线/未登录）`);
+    return;
+  }
+  if (!client.isMemberInRoom(serveNo)) {
+    console.log(`[bcp] 自检跳过（${reason}）：${client.nameOf(serveNo)} 不在同一房间（BC+ 要求同房）`);
+    return;
+  }
+  if (bcpSelfTestTimer) clearTimeout(bcpSelfTestTimer);
+  bcpReplySeen = false;
+  client.sendBCPWhisper(serveNo, "help");
+  console.log(`[bcp] 自检已发出（${reason}）——等待她客户端回执（15s）…`);
+  bcpSelfTestTimer = setTimeout(() => {
+    bcpSelfTestTimer = null;
+    if (!bcpReplySeen) {
+      console.log(
+        "[bcp] 自检超时：15 秒内无回执。可能原因：①她客户端没装/没启用 BC+ ②她不在同房 ③BOT 在她黑名单/幽灵名单里"
+      );
+    }
+  }, 15000);
+}
+
+client.onBCPMessage = (event) => {
+  bcpReplySeen = true;
+  if (bcpSelfTestTimer) {
+    clearTimeout(bcpSelfTestTimer);
+    bcpSelfTestTimer = null;
+  }
+  if (event.kind === "reply") {
+    const text = event.text ?? "";
+    if (/executed\.?\s*$/i.test(text)) {
+      // BC+ 执行成功回执：SendAction(`BC+: Command "Kneel" executed.`)
+      console.log(`[bcp] ✅ 命令执行确认（${event.senderName}）${bcpOrderWait ? `[!bcp ${bcpOrderWait.command}] ` : ""}${text}`);
+      bcpOrderWait = null;
+    } else if (/failed|no permission|not permitted|rejected|unknown command/i.test(text)) {
+      console.log(`[bcp] ❌ 命令被拒/失败（${event.senderName}）：${text}`);
+      bcpOrderWait = null;
+    } else {
+      console.log(`[bcp] ✅ 通道确认：${event.senderName} 回执 → ${text}`);
+    }
+  } else {
+    // #89e 规矩回执（BC+ Rules 用 SendBCPMessage 定向回，走 Hidden+BCP 这条通道）
+    if (event.message === "RuleCommandResult" || event.message === "RuleCommandBatchResult") {
+      const p = event.payload ?? {};
+      const rid = typeof p.rule === "string" ? p.rule : "";
+      const rdef = rid ? findBcpRule(rid) : undefined;
+      const zh = rdef ? `${rdef.zh}（${rid}）` : rid || "(未指明规矩)";
+      if (p.ok === true) {
+        console.log(`[bcp] ✅ 规矩已生效（${event.senderName}）${bcpRuleWait ? `[${bcpRuleWait.label}] ` : ""}${zh}`);
+      } else {
+        const why = typeof p.reason === "string" ? p.reason : "未知原因";
+        console.log(`[bcp] ❌ 规矩被拒（${event.senderName}）${zh}：${why}`);
+        if (/dominant/i.test(why)) {
+          client.sendChat("[BCP] 她的 BC+ 预设是 Dominant —— 规矩编辑被整条拒绝，这条通道暂时用不上。");
+        } else if (/no permission/i.test(why)) {
+          client.sendChat("[BCP] 权限不够——她在 BC+ 里给「改我的规矩」设了更高的门槛。");
+        }
+      }
+      bcpRuleWait = null;
+      return;
+    }
+    // #89f 远程设置回执（DataSync 用 SendBCPMessage 定向回，同样走 Hidden+BCP）
+    if (event.message === "SettingCommandResult") {
+      const p = event.payload ?? {};
+      if (p.ok === true) {
+        console.log(`[bcp] ✅ 设置已改（${event.senderName}）${bcpSettingWait ? `[${bcpSettingWait.label}] ` : ""}`);
+      } else {
+        const why = typeof p.reason === "string" ? p.reason : "未知原因";
+        console.log(`[bcp] ❌ 设置被拒（${event.senderName}）：${why}`);
+        if (/no permission/i.test(why)) {
+          client.sendChat("[BCP] 权限不够——她在 BC+ 里给「改我的宠物设置」设了更高的门槛（默认要 Owner）。");
+        } else if (/not editable|invalid setting/i.test(why)) {
+          client.sendChat(`[BCP] 这个设置递不过去（${why}）。`);
+        }
+      }
+      bcpSettingWait = null;
+      return;
+    }
+    const peer = ingestBcpEvent(event);
+    console.log(`[bcp] 协议消息：${event.senderName} message=${event.message} | ${event.text}`);
+    // #89 第二步「听懂层」：她的公开数据翻译成中文摘要打日志（诊断用；LLM 侧读 ctx.serveBcpStatus）
+    const serveNoNow = serveMemberNumber();
+    if (
+      peer &&
+      serveNoNow !== null &&
+      event.sourceNo === serveNoNow &&
+      (event.message === "SettingSync" || event.message === "CategorySync")
+    ) {
+      const summary = describeBcpStatus(peer, (no) => client.nameOf(no));
+      console.log(`[bcp] 她的状态已更新（${event.message}）：\n${summary || "（本包没有我们认识的字段）"}`);
+    }
+  }
+};
+
+// #90 口塞规矩记账恢复：重启后仍知道"哪几条规矩是我因口塞加的"，摘口塞才撤得准
+if (config.bcpEnabled && config.bcpGagRules) loadGagRulesByBot();
+
+// 启动自动自检：只做一次（60 秒后、她同房时）——纯验证用途，收到回执即认为通道已确认
+if (config.bcpEnabled && config.bcpSelfTest) {
+  setTimeout(() => {
+    if (bcpAutoTestDone || !config.bcpEnabled) return;
+    bcpAutoTestDone = true;
+    runBcpSelfTest("启动自动");
+  }, 60000);
+}
 
 // 服务对象对 BOT 做游戏动作（摸头/搂抱等）→ BOT 也要能"感受到"并回应
 client.onActivity = async (event) => {
@@ -3364,6 +4066,13 @@ client.onItemChange = async (event) => {
   const ownTs = ownItemOps.get(key);
   if (ownTs !== undefined && Date.now() - ownTs < 8000) return;
 
+  // ---- ⓪ #90 口塞状态对账 ----
+  //   她身上的道具变了（自摘口塞 / 挣扎挣脱把口塞滑脱 / 别人摘走）→ 延迟看口塞还在不在，
+  //   不在就把 BOT 加过的那两条规矩撤掉。只撤不补——补只走「BOT 亲手戴」那条路径。
+  if (serveNo !== null && event.targetNo === serveNo) {
+    scheduleGagReconcile(`她的道具变化（${event.group}）`, false, 900);
+  }
+
   // ---- ① 玩具/亲密部位变化感知（#14）----
   if (serveNo !== null && event.targetNo === serveNo && handleToyChange(serveNo, event.group)) {
     // 节流触发反应：连续调档只反应一次（6 秒去抖，与挣扎同思路）
@@ -3584,6 +4293,7 @@ function buildBrainContext(
   let serveOwnedByBot = false;
   let serveLeashStatus = "";
   let serveLeaveStatus = "";
+  let serveBcpStatus = ""; // #89 第二步：她客户端广播的 BC+ 公开状态（宠物四项/人际关系/规矩/诅咒）
   let serveHasLowerToy = false; // 谎言兜底用：她是否真戴着下身玩具
   let serveHasRestraint = false; // 惩罚菜单用：她身上是否有束缚道具（没有则收紧/上锁无意义，菜单切换为"先戴道具"）
   const serveNo = serveMemberNumber();
@@ -3614,11 +4324,14 @@ function buildBrainContext(
         ? "your serve target is WEARING a leash but nobody is holding it — emit leash_hold to pick it up."
         : "your serve target is NOT collared/leashed yet. Leashing follows a strict 3-step order: ① item_put a collar (PetCollar) on her neck → ② item_put a leash (CollarLeash) on her neck-restraints slot → ③ leash_hold. Never pretend to grab a leash that is not attached.";
     }
+    // #89 第二步「听懂层」：她自己的 BC+ 客户端广播出来的公开状态（真实数据，不是猜的）。
+    //   拿不到就留空串——LLM 不会看到这一段，避免它编造她的宠物数值。
+    serveBcpStatus = describeBcpStatus(getBcpState(serveNo), (no) => client.nameOf(no));
   }
 
   // 一次性诊断：让 LLM 看到的"服务对象能力摘要"和穿着摘要打出来，
   // 排查"LLM 忽视 serveAbilities 还是数据有问题"（2026-09-04 17:56 用户截图反馈）
-  console.log(`[ctx-diag] serveAppearance=${serveAppearance.slice(0, 80)} | serveAbilities=${serveAbilities} | mood=${anger.getMood().level}`);
+  console.log(`[ctx-diag] serveAppearance=${serveAppearance.slice(0, 80)} | serveAbilities=${serveAbilities} | mood=${anger.getMood().level} | bcp=${serveBcpStatus ? `${serveBcpStatus.split("\n").length}行` : "无"}`);
 
   // 撒谎抓包必罚窗口状态（供下方 punishMenu 注入用，详见变量声明处注释）
   const moodLevel = config.angerEnabled ? anger.getMood().level : "平静";
@@ -3642,6 +4355,7 @@ function buildBrainContext(
     serveOwnedByBot,
     serveLeashStatus,
     serveLeaveStatus,
+    serveBcpStatus,
     selfAppearance,
     selfAbilities,
     selfHandheld,
@@ -4534,6 +5248,10 @@ async function executeIntent(intent: Intent): Promise<void> {
       rememberOwn(isSelfPut
         ? `（给自己戴上 ${intent.item}${vLabel}${adjustLabel}）`
         : `（给 ${client.nameOf(targetNo)} 戴上 ${intent.item}${vLabel}${adjustLabel}）`);
+      // #90 给服务对象戴上堵嘴道具 → 延迟对账补两条 BC+ 规矩（OOC + 表情动作）
+      if (!isSelfPut && targetNo === serveMemberNumber() && isGagAsset(check.group, check.name)) {
+        scheduleGagReconcile(`戴上 ${check.name}`, true);
+      }
       if (intent.text) {
         client.sendChat(intent.text, "Chat");
         rememberOwn(intent.text);
@@ -4945,6 +5663,100 @@ async function executeIntent(intent: Intent): Promise<void> {
       }
       client.sendShockAction(targetNo, intent.level ?? 1, found.name, found.group);
       rememberOwn(`（触发了 ${client.nameOf(targetNo)} ${found.name === "PetSuitShockCollar" ? "宠物服电击项圈" : "电击项圈"} 的电流，强度 ${intent.level ?? 1}）`);
+      if (intent.text) {
+        client.sendChat(intent.text, "Chat");
+        rememberOwn(intent.text);
+      }
+      break;
+    }
+
+    // ============ #89 BC+ 远程指令（耳语 !bcp 通道）============
+    case "bcp_command": {
+      // 命令名再归一一次（brain 侧已归一，这里兜底：手写 intent / 未来别的入口也不会踩大小写坑）
+      const cmd = canonicalBcpCommand(intent.command ?? "") ?? "";
+      if (!cmd) {
+        console.log(`[bcp] 指令 "${intent.command ?? ""}" 不在安全白名单，丢弃`);
+        break;
+      }
+      // 默认对她下；也允许 LLM 显式给 target（第一版仅服务对象，避免误伤路人）
+      const serveNo = serveMemberNumber();
+      let targetNo: number | null = null;
+      if (intent.target) {
+        targetNo = client.resolveMemberNumber(intent.target);
+      } else {
+        targetNo = serveNo;
+      }
+      if (targetNo === null) {
+        console.log(`[bcp] 指令 rejected：目标 "${intent.target ?? "(serve)"}" 找不到`);
+        break;
+      }
+      // 可行性前置检查：必须同房 + 目标不是 BOT 自己（BC+ 用 FindCharacterInRoom 校验发送者）
+      const sameRoom = client.isMemberInRoom(targetNo);
+      if (!sameRoom) {
+        console.log(`[bcp] 指令 rejected：${client.nameOf(targetNo)} 不在同一房间（BC+ 要求同房）`);
+        if (intent.text) {
+          client.sendChat(intent.text, "Chat");
+          rememberOwn(intent.text);
+        }
+        break;
+      }
+      if (cmd === "emoticon") {
+        const emo = canonicalBcpEmoticon(intent.arg ?? "");
+        if (!emo) {
+          console.log(`[bcp] emoticon 参数非法 "${intent.arg ?? ""}"，降级为纯台词`);
+          if (intent.text) {
+            client.sendChat(intent.text, "Chat");
+            rememberOwn(intent.text);
+          }
+          break;
+        }
+        client.sendBCPWhisper(targetNo, cmd, emo);
+      } else {
+        client.sendBCPWhisper(targetNo, cmd);
+      }
+      // 指令在她的客户端执行、结果走定向回执（client.onBCPMessage）——台词照发，不阻塞
+      if (intent.text) {
+        client.sendChat(intent.text, "Chat");
+        rememberOwn(intent.text);
+      }
+      break;
+    }
+
+    // ============ #89e BC+ 规矩（深度层：持续限制）============
+    case "bcp_rule": {
+      const def = findBcpRule(intent.rule ?? "");
+      if (!def) {
+        console.log(`[bcp] 规矩 rejected：认不出 "${intent.rule ?? ""}"`);
+        break;
+      }
+      // 双保险：LLM 只许自主下 A 档（brain 已拦一层，这里再拦一层——
+      // 会剥夺她能力的规矩永远只能由她本人在口令里点名）
+      if (def.tier !== "A") {
+        console.log(`[bcp] 规矩 rejected：LLM 不可自主下发「${def.zh}」（${def.tier} 档）——降级为纯台词`);
+        if (intent.text) {
+          client.sendChat(intent.text, "Chat");
+          rememberOwn(intent.text);
+        }
+        break;
+      }
+      const ruleServeNo = serveMemberNumber();
+      if (ruleServeNo === null || !client.isMemberInRoom(ruleServeNo)) {
+        console.log(`[bcp] 规矩 rejected：她不在同一房间（BC+ 要求同房）`);
+        if (intent.text) {
+          client.sendChat(intent.text, "Chat");
+          rememberOwn(intent.text);
+        }
+        break;
+      }
+      const ruleOn = intent.ruleOn !== false;
+      client.sendBCPMessage(
+        { message: "RuleCommand", action: intent.ruleAction ?? "setActive", rule: def.id, value: ruleOn },
+        ruleServeNo
+      );
+      console.log(
+        `[bcp] 下发规矩（LLM）：${def.zh}（${def.id}）${ruleOn ? "开" : "关"} -> ${client.nameOf(ruleServeNo)}——等回执…`
+      );
+      bcpRuleWait = { rule: def.id, label: `${def.zh}${ruleOn ? "开" : "关"}`, at: Date.now() };
       if (intent.text) {
         client.sendChat(intent.text, "Chat");
         rememberOwn(intent.text);
@@ -5513,6 +6325,10 @@ async function executeIntent(intent: Intent): Promise<void> {
       if (intent.text) {
         client.sendChat(intent.text, "Chat");
         rememberOwn(intent.text);
+      }
+      // #90 摘下了她身上的东西 → 延迟对账（口塞真离身了才撤；没戴时静默返回，不刷日志）
+      if (targetNo === serveMemberNumber()) {
+        scheduleGagReconcile(`BOT 摘下 ${slotEntry?.Name ?? intent.slot}`, false);
       }
       break;
     }

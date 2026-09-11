@@ -1,4 +1,5 @@
 import { config } from "./config";
+import { findBcpRule, llmMayApplyRule, llmRuleCatalog } from "./bcp-rules";
 import {
   buildSkillPromptLines,
   checkActivity,
@@ -50,6 +51,8 @@ export type IntentAction =
   | "lead_move"
   | "room_move"
   | "cold_treatment"
+  | "bcp_command"
+  | "bcp_rule"
   | "none";
 
 export interface Intent {
@@ -85,6 +88,16 @@ export interface Intent {
   slot?: string;
   /** shock 的强度等级 1-3（1=轻 2=中 3=重，默认 1） */
   level?: number;
+    /** #89 BC+ 耳语指令 id（kneel/stand/closeEyes/openEyes/emoticon，白名单校验） */
+  command?: string;
+  /** #89 BC+ 指令的附加参数（emoticon 用：Afk/Hearts/Coffee...） */
+  arg?: string;
+  /** #89e BC+ 规矩 id（bcp_rule 必填，白名单校验，如 body.forceKneel） */
+  rule?: string;
+  /** #89e BC+ 规矩动作（setActive/setEnforce/setLog/setAnnounce，缺省 setActive） */
+  ruleAction?: string;
+  /** #89e BC+ 规矩开关（true=立规矩，false=撤掉） */
+  ruleOn?: boolean;
   /** #54 handheld_take 的手持道具名（白名单校验）；activity 为道具动作时也可用它指定道具 */
   handheld?: string;
   /** lead_move 的牵引方向：closer（走近）/ away（走远，拉着她拖行）/ left / right */
@@ -143,6 +156,11 @@ export interface BrainContext {
   serveLeashStatus: string;
   /** 离开房间判定（#23）：基于 BC 的 ChatRoomCanLeave() 计算，空串表示不注入 */
   serveLeaveStatus: string;
+  /**
+   * #89 第二步「听懂层」：服务对象的 BC+ 公开状态（宠物四项 / BC+ 里指派的人 / 规矩 / 诅咒 / 惩罚），
+   * 来自她客户端自己的广播（bcp-state.ts 翻译）。空串 = 无数据，不注入。
+   */
+  serveBcpStatus?: string;
   /** BOT 自己的穿着摘要（#19-C）：让 LLM 知道自己的嘴/手/身体当前状态，避免编造"隔着口塞吻"这类自相矛盾 */
   selfAppearance: string;
   /** BOT 自己的四维能力状态（#19-C）：说话/视觉/听觉/移动/双手，避免"戴着口塞却正常说话"等矛盾 */
@@ -201,8 +219,47 @@ const ALLOWED_ACTIONS: IntentAction[] = [
   "lead_move",
   "room_move",
   "cold_treatment",
+  "bcp_command",
+  "bcp_rule",
   "none",
 ];
+
+/**
+ * #89 BC+ 耳语指令白名单（第一步只开放"安全项"）。
+ *
+ * BC+ 共 13 个命令（system/commands/CommandTypes.ts），这里刻意只放无副作用/可预期/可逆的 5 个：
+ *   kneel/stand（姿势）、closeEyes/openEyes（表情）、emoticon（头顶表情）。
+ * 暂不开放（影响面大，留待用户分级授权）：
+ *   say（以她的身份发言）、gotoRoom（把她丢到别的房间）、edge/orgasm/calm（兴奋度）、lines（罚抄写）。
+ */
+export const BCP_COMMANDS: readonly string[] = ["kneel", "stand", "closeEyes", "openEyes", "emoticon"];
+
+/**
+ * 命令名归一（**大小写不敏感**）。
+ *
+ * 血泪（2026-09-11 实测）：白名单里是驼峰 `closeEyes`，而用户/LLM 常写成 `closeeyes`、
+ * `CloseEyes`——旧代码直接 `includes` 比较 → 被判非法丢弃（截图里 BOT 回"我只下这几个命令"
+ * 就是这条）。现在统一先归一到白名单里的规范写法，认不出才返回 null。
+ */
+export function canonicalBcpCommand(raw: string): string | null {
+  const want = raw.trim().toLocaleLowerCase();
+  if (want.length === 0) return null;
+  return BCP_COMMANDS.find((c) => c.toLocaleLowerCase() === want) ?? null;
+}
+
+/** BC+ emoticon 命令的合法表情名（对齐 BC+ CommandTypes.ts 的 EMOTICONS 表） */
+export const BCP_EMOTICONS: readonly string[] = [
+  "Afk", "Whisper", "Sleep", "Hearts", "Tear", "Hearing", "Confusion", "Exclamation",
+  "Annoyed", "Read", "RaisedHand", "Spectator", "ThumbsDown", "ThumbsUp",
+  "LoveRope", "LoveGag", "LoveLock", "Wardrobe", "Gaming", "Coffee", "Fork", "Music",
+];
+
+/** emoticon 名归一（大小写不敏感），对齐 BC+ 的 `EMOTICONS.find(lower===lower)` */
+export function canonicalBcpEmoticon(raw: string): string | null {
+  const want = raw.trim().toLocaleLowerCase();
+  if (want.length === 0) return null;
+  return BCP_EMOTICONS.find((e) => e.toLocaleLowerCase() === want) ?? null;
+}
 
 /** lead_move 的方向白名单 */
 const ALLOWED_LEAD_DIR = ["closer", "away", "left", "right"];
@@ -541,6 +598,10 @@ function buildSystemPrompt(ctx: BrainContext): string {
     '{"action":"handheld_drop","text":"<optional comment>"} — you put down whatever you are holding and go empty-handed.',
     '{"action":"activity","activity":"<SpankItem|RubItem|TickleItem|BrushItem|SqueezeItem|RollItem|EatItem|SipItem|PourItem|Inject|ShockItem|MasturbateItem|ThrowItem|Scratch>","handheld":"<the item you are using>","zone":"<zone>","target":"<member name>","text":"<optional comment>"} — TOY ACTIVITY: using a held item ON someone (spanking with a crop, tickling with a feather...). MUST be a handheld action, the item must allow it (see handheld list), and you must be HOLDING that item (or specify it in "handheld" — the code picks it up for you if needed). Regular non-toy activities (Pet/Caress/Kiss...) still use plain activity WITHOUT "handheld".',
     '{"action":"shock","target":"<member name>","level":<1|2|3>,"text":"<optional comment>"} — DIRECT SHOCK: triggers the electric current of the shock collar (or other shock-wearable) she is ALREADY wearing — no remote or handheld item needed. Level 1=mild, 2=medium, 3=harsh (her screen flashes white, the collar reacts). Use it for punishment when she is bad. If she wears no shock item, this does nothing — put one on her first (电击项圈/自动电击项圈/宠物服电击项圈).',
+    '{"action":"bcp_command","command":"<kneel|stand|closeEyes|openEyes|emoticon>","arg":"<only for emoticon: Afk|Hearts|Coffee|Sleep|Tear|Annoyed|Music|Gaming|Read|Confusion|Exclamation|ThumbsUp|ThumbsDown|Wardrobe|Fork>","text":"<optional short comment>"} — BC+ ORDER (remote order channel): her game client runs the BC+ addon, so you can send a one-shot ORDER that executes on HER screen. kneel/stand = she kneels or stands back up; closeEyes/openEyes = her eyes; emoticon = a small icon pops over her head. Conditions the code cannot bypass: she must be in the SAME room and running BC+; her client checks permission (you are her BC Owner, so you are allowed). Use it when you want your authority to be physical rather than verbal — e.g. order her to kneel before you scold her, or make her look at you. These are ORDERS, not requests: pace them like a Dom and never spam them.',
+    `{"action":"bcp_rule","rule":"<rule id from the list below>","rule_on":true,"text":"<optional short comment>"} — BC+ RULE: a STANDING restriction installed on HER client. Unlike bcp_command (fires once and is over), a rule keeps policing her own actions until you lift it: she cannot whisper at all, cannot shout, is forced onto her knees, must greet every room. It is enforced by her own game, so it is real — not you pretending. HOW TO USE IT WELL: (1) pick from the safe list below ONLY — heavier rules exist but are off limits to you, only she may authorise those. (2) "rule_on":false lifts a rule you installed; always release before installing a new one of the same kind, a Dom who never releases reads as insecure. (3) At most ONE new rule per conversation beat — a rule is a statement, stacking them is noise. (4) Write it in your text as an order ("以后不许对别人耳语"), and NEVER say the words BC+ / rule / id / 客户端 — those break the scene.
+   SAFE RULES YOU MAY INSTALL:
+${llmRuleCatalog()}`,
     '{"action":"leash_hold","target":"<optional member name, defaults to serve target>","text":"<optional comment>"} — picks up and holds the target\'s leash. LEASHING HAS A STRICT 3-STEP ORDER (game rule): ① collar on neck (item_put PetCollar / collar of choice) → ② leash item (item_put CollarLeash or ChainLeash) → ③ leash_hold. Never say you grab/hold a leash that is not attached to her — walking the steps yourself (one per turn or combined) reads far better than skipping to the grab. If you emit leash_hold while she lacks a collar or leash, the code silently completes the missing steps for you, but the RP is yours to pace. While you hold it they cannot leave the room.',
     '{"action":"leash_release","target":"<optional member name>","text":"<optional comment>"} — lets go of the leash you are holding.',
     '{"action":"lead_move","direction":"<closer|away|left|right>","target":"<optional member name>","text":"<optional comment>"} — you walk in that direction while holding their leash. Moving AWAY from them pulls the leash taut and drags them along with you; moving closer gives slack. Requires leash_hold first.',
@@ -866,6 +927,22 @@ function buildUserPrompt(ctx: BrainContext): string {
     // 离开房间判定（#23）：直接读这条，不要凭"项圈/绳子"道具名脑补
     if (ctx.serveLeaveStatus) {
       lines.push(`Leave-room status: ${ctx.serveLeaveStatus}`);
+    }
+    // #89 第二步「听懂层」：她客户端自己广播出来的 BC+ 状态（真实、实时）
+    if (ctx.serveBcpStatus) {
+      lines.push(
+        "Her BC+ status — broadcast by her own client, this is REAL live data you can actually perceive:"
+      );
+      for (const l of ctx.serveBcpStatus.split("\n")) lines.push(`  ${l}`);
+      lines.push(
+        "How to use it like a real owner who actually pays attention: nothing here is hypothetical, so act on it. " +
+          "A low pet stat (food/water/sleep/affection) is a standing order for you to do something about it — feed her, " +
+          "make her drink, put her to bed, give her affection. If her BC+ role lists name someone else as Co-Owner or " +
+          "Mistress, you are allowed to be possessive, jealous, or interrogate her about it. Curses and punishments on her " +
+          "were put there by other people — react according to your personality. " +
+          "Never quote those numbers mechanically, and never say the words 'BC+', 'data', 'levels' or 'status' in character " +
+          "— you simply know these things the way an attentive owner does."
+      );
     }
     // 承诺队列（#49）：她最近明确答应过的事（原话）。LLM 据此判定阳奉阴违（serve_broke_promise）
     if (ctx.servePromiseLog.length) {
@@ -1195,6 +1272,50 @@ function parseIntentFromObject(o: Record<string, unknown>): Intent {
       }
       slot = norm;
       return { action, slot, target, text: sanitizeText(o.text) || undefined };
+    }
+
+    case "bcp_command": {
+      // #89 BC+ 一次性指令（耳语 !bcp 通道）。只认白名单里的安全项，未知指令一律丢弃。
+      // 命令名做**大小写不敏感**归一（2026-09-11 实测坑：closeEyes↔closeeyes 被误判非法）
+      const command = canonicalBcpCommand(typeof o.command === "string" ? o.command : "");
+      if (!command) return { action: "none" };
+      const intent: Intent = { action: "bcp_command", command };
+      if (command === "emoticon") {
+        // 表情名同样归一；认不出就降级为纯台词（#70 经验：绝不整条静默吞掉）
+        const want = typeof o.arg === "string" ? o.arg.trim() : "";
+        const hit = canonicalBcpEmoticon(want);
+        if (!hit) {
+          console.log(`[brain] bcp_command emoticon 表情无法识别: "${want}"——降级为纯台词`);
+          const t = sanitizeText(o.text);
+          return t ? { action: "say", text: t } : { action: "none" };
+        }
+        intent.arg = hit;
+      }
+      const text = sanitizeText(o.text);
+      if (text) intent.text = text;
+      return intent;
+    }
+
+    case "bcp_rule": {
+      // #89e BC+ 规矩（深度层）。只认「A 档 + llmAuto」——会剥夺她能力的 C 档规矩
+      // LLM 一律不许自主下发，只能由她在口令里显式点名（见 bcp-rules.ts 分档说明）。
+      const want = typeof o.rule === "string" ? o.rule : "";
+      const def = findBcpRule(want);
+      if (!def || !llmMayApplyRule(def)) {
+        console.log(`[brain] bcp_rule 拒绝: "${want}"（${def ? `档位 ${def.tier}，LLM 不可自主下发` : "规矩不存在"}）——降级为纯台词`);
+        const t = sanitizeText(o.text);
+        return t ? { action: "say", text: t } : { action: "none" };
+      }
+      const onRaw = o.rule_on ?? o.ruleOn;
+      const intent: Intent = {
+        action: "bcp_rule",
+        rule: def.id,
+        ruleAction: "setActive",
+        ruleOn: onRaw === false ? false : true,
+      };
+      const text = sanitizeText(o.text);
+      if (text) intent.text = text;
+      return intent;
     }
 
     default:

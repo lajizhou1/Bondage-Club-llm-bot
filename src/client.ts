@@ -45,6 +45,30 @@ export interface ActivityEvent {
   activityKey?: string;
 }
 
+/**
+ * #89 BC+（Seles84/bc-plus）协议消息事件。
+ *
+ * BC+ 的跨玩家功能全部走隐藏消息：{Type:"Hidden", Content:"BCP", Dictionary:<普通对象>}。
+ * BC+ 源码注释实锤：服务器会校验**数组**格式的字典条目并剔除自定义项，但对**普通对象**字典
+ * 在 Hidden 消息上原样透传（BCX 用的同一机制）——所以任何客户端（含我们的 BOT）都能收发。
+ *
+ * 它的"回执"则走另一条路：{Type:"Activity", Content:"BCPAction",
+ *   Dictionary:[{Tag:'MISSING TEXT IN "ActivityDictionary.csv": BCPAction', Text:"<渲染文本>"}]}
+ * 靠 BC 的"找不到模板就把 Text 当整条消息"兜底，把文字直显给接收方（不受口塞影响、不查字典）。
+ */
+export interface BcpMessageEvent {
+  /** reply=BC+ 对指令的定向回执（耳语 !bcp 的回复）；sync=BC+ 广播/定向的协议消息本体 */
+  kind: "reply" | "sync";
+  /** 纯文本内容（reply 是渲染好的整句；sync 是消息摘要） */
+  text: string;
+  sourceNo: number;
+  senderName: string;
+  /** sync 专用：BC+ 协议 message 字段（SettingSync / CommandInvokeResult / ContractOffer ...） */
+  message?: string;
+  /** sync 专用：原始消息体（普通对象） */
+  payload?: Record<string, unknown>;
+}
+
 /** 身上道具发生变更（穿上/脱下/滑脱）时的事件（含 BOT 自己操作的回执，由上层过滤） */
 export interface ItemChangeEvent {
   /** 被变更的角色成员号 */
@@ -171,6 +195,8 @@ export class BCClient {
 
   onChat?: (event: ChatEvent) => void;
   onActivity?: (event: ActivityEvent) => void;
+  /** #89 收到 BC+ 协议消息或其回执（需她客户端装了 BC+；BOT 侧只解析不执行） */
+  onBCPMessage?: (event: BcpMessageEvent) => void;
   onItemChange?: (event: ItemChangeEvent) => void;
   /**
    * 收到好友 Beep 时触发（服务器 AccountBeep 事件，前提：发送方在 BOT 好友列表 / 有所有权 / BeepType=Leash）。
@@ -591,6 +617,42 @@ export class BCClient {
     this.limiter.send(C2S.ChatRoomChat, { Content: content, Type: "Hidden", Target: targetMemberNumber });
   }
 
+  /**
+   * #89 BC+ 耳语指令：`!bcp <command> [argument]`。
+   *
+   * 关键点（BC+ 源码 `modules/Commands.ts` 注释原话）：发送方**不需要**装 BC+——
+   * "works even when the sender does not run BC+"。目标客户端（装了 BC+、且 BOT 在其
+   * Authority 里够权限）校验后用定向 Activity 回执结果。
+   *
+   * 权限无需额外配置：BC+ 的 commands.use 默认门槛是 Mistress，而"我的 BC Owner"是最高级
+   * （derivedList(BCOwner) = [Player.Ownership.MemberNumber]）——BOT 是她的 Owner → 天然有权。
+   * 前提：她在同一房间（BC+ 用 FindCharacterInRoom 校验发送者）；被黑名单/幽灵名单阻断除外。
+   */
+  sendBCPWhisper(targetMemberNumber: number, command: string, argument = ""): void {
+    const arg = argument.trim();
+    const text = arg ? `!bcp ${command} ${arg}` : `!bcp ${command}`;
+    this.sendWhisper(targetMemberNumber, text);
+    console.log(`[bcp] 耳语指令 -> #${targetMemberNumber}（${this.nameOf(targetMemberNumber)}）：${text}`);
+  }
+
+  /**
+   * #89 BC+ 协议消息本体（第二层能力预留：远程规则/诅咒/契约等）。
+   *
+   * Dictionary 必须是**普通对象**（不能是数组）——服务器只对数组条目做 schema 校验并剔除自定义项，
+   * 对象字典在 Hidden 消息上原样透传。
+   *
+   * @param target 缺省=全房广播；给成员号=只发给该人（BC+ 的 SendBCPMessage 同款）
+   */
+  sendBCPMessage(message: Record<string, unknown>, target?: number): void {
+    console.log(`[bcp] 协议消息 -> ${target === undefined ? "全房" : `#${target}`}：${String(message.message)}`);
+    this.limiter.send(C2S.ChatRoomChat, {
+      Type: "Hidden",
+      Content: "BCP",
+      Dictionary: message,
+      Target: target ?? null,
+    });
+  }
+
   /** 移动到地图绝对坐标 */
   moveTo(x: number, y: number): void {
     this.limiter.send(C2S.ChatRoomCharacterMapDataUpdate, { Pos: { X: x, Y: y } });
@@ -965,6 +1027,11 @@ export class BCClient {
     return this.displayName(this.characters.get(memberNumber)) ?? `#${memberNumber}`;
   }
 
+  /** 该成员是否在当前房间（BC+ 指令要求发送者与目标同房，否则它直接无视） */
+  isMemberInRoom(memberNumber: number): boolean {
+    return this.characters.has(memberNumber);
+  }
+
   /** 按名字在当前房间成员里查找成员号（不区分大小写；找不到返回 null）。不含 BOT 自己。 */
   findMemberByName(name: string): number | null {
     const target = name.trim();
@@ -999,6 +1066,54 @@ export class BCClient {
     if (data.Sender === this._player.MemberNumber) {
       // 自己发出的消息回声：Action 公告用于确认服务器确实转发了（诊断"公告消失"用）
       if (type === "Action") this.confirmActionEcho(String(raw));
+      return;
+    }
+
+    // #89 BC+ 指令回执（Type=Activity, Content="BCPAction"）：BC+ 用"MISSING 文本兜底"技巧——
+    //   Dictionary 首项的 Tag 故意指向一个不存在的模板键，BC 找不到模板就把 Text 当整条消息直接渲染。
+    //   必须拦在下面的通用 Activity 分支之前，否则会被当成普通游戏动作（解析不出模板→静默丢弃）。
+    if (type === "Activity" && raw === "BCPAction") {
+      const dict = Array.isArray(data.Dictionary) ? (data.Dictionary as Array<Record<string, unknown>>) : [];
+      // 优先取 Tag 指向 BCPAction 兜底键的那条（BC+ 固定把渲染文本放这里），取不到再退第一条带 Text 的
+      const entry =
+        dict.find((d) => d && typeof d.Text === "string" && String(d.Tag ?? "").includes("BCPAction")) ??
+        dict.find((d) => d && typeof d.Text === "string");
+      const text = typeof entry?.Text === "string" ? entry.Text : "";
+      if (text) {
+        console.log(`[bcp] 回执 <- ${senderName}：${text}`);
+        this.onBCPMessage?.({
+          kind: "reply",
+          text,
+          sourceNo: typeof data.Sender === "number" ? data.Sender : -1,
+          senderName,
+        });
+      } else {
+        console.log("[bcp] 收到 BCPAction 但 Dictionary 里没有 Text，忽略");
+      }
+      return;
+    }
+
+    // #89 BC+ 协议消息本体（Type=Hidden, Content="BCP"，Dictionary 是普通对象）
+    if (type === "Hidden" && raw === "BCP") {
+      const dict = data.Dictionary as unknown;
+      if (dict && typeof dict === "object" && !Array.isArray(dict)) {
+        const payload = dict as Record<string, unknown>;
+        const message = typeof payload.message === "string" ? payload.message : "(unknown)";
+        const text =
+          typeof payload.text === "string" ? String(payload.text) : JSON.stringify(payload).slice(0, 300);
+        console.log(`[bcp] 协议消息 <- ${senderName}：message=${message} ${text}`);
+        this.onBCPMessage?.({
+          kind: "sync",
+          message,
+          text,
+          payload,
+          sourceNo: typeof data.Sender === "number" ? data.Sender : -1,
+          senderName,
+        });
+      } else {
+        // BC+ 之外还有别的客户端用 Hidden+BCP？对象字典才对，数组说明不是 BC+
+        console.log("[bcp] 收到 Content=BCP 的 Hidden 消息，但 Dictionary 不是普通对象（非 BC+ 协议），忽略");
+      }
       return;
     }
 

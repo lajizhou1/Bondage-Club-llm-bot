@@ -21,6 +21,7 @@ data/intimacy.json
 data/game-state.json
 data/outfits/
 data/gohome-state.json
+data/gag-rules.json
 
 # 临时对比脚本（含 persona 与对话样本）
 scripts/compare-models.mjs
@@ -31,3 +32,6 @@ glm_*.json
 
 # 历史备份文件
 *.bak-*
+
+# 玩家客户端用户脚本（本机自用，暂不入库）
+bc-mods/
