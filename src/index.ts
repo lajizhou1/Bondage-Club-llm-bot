@@ -2523,6 +2523,12 @@ client.onRoomJoined = (roomName) => {
     if (config.botLabelColor) {
       client.setLabelColor(config.botLabelColor);
     }
+    // 启动设置角色描述/BIO（data/description.txt；文件存在且非空才发，删文件=不动当前描述）
+    const descPath = path.join(process.cwd(), "data", "description.txt");
+    if (fs.existsSync(descPath)) {
+      const desc = fs.readFileSync(descPath, "utf8").trim();
+      if (desc) client.setDescription(desc);
+    }
     if (!config.botOutfitOnStartup) {
       console.log("[bot-outfit] 启动重穿已关闭（BOT_OUTFIT_ON_STARTUP=false），保留当前穿着；白名单权限照常生效");
     } else {
@@ -3694,8 +3700,19 @@ async function runRespond(speakerIsServe: boolean): Promise<void> {
   // 记下自己这一轮的 generation 号，runRespond 末尾与全局核对，过期就 skip emit
   const myGen = respondGeneration;
   const now = Date.now();
-  if (now - lastResponseAt < config.responseCooldownMs) {
-    console.log(`[runRespond] gen=${myGen} cooldown, skip`);
+  const cooldownRemain = config.responseCooldownMs - (now - lastResponseAt);
+  if (cooldownRemain > 0) {
+    // #74 修复（2026-09-08）：撞冷却不再直接丢弃——这一轮已经把 gen 顶上去，
+    //   在飞的旧 gen 回来会判 stale，两边双双静默（她想好的回复变孤儿，
+    //   09-07 拥抱沉默 5.5 分钟 / 09-08 漏接"想和主人出去玩"都是这条链）。
+    //   改为延迟重排：到点重跑，语义不变（最新 gen 获胜、过期响应照样 stale），
+    //   只保证"最新一轮最终一定会发言"。下一条消息 respond() 会 clearTimeout
+    //   掉这个重排，天然有界不会堆积。
+    console.log(`[runRespond] gen=${myGen} cooldown, reschedule in ${cooldownRemain}ms`);
+    pendingRespondTimer = setTimeout(() => {
+      pendingRespondTimer = null;
+      void runRespond(pendingIsServe);
+    }, cooldownRemain);
     return;
   }
   lastResponseAt = now;

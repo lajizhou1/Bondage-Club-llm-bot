@@ -548,6 +548,10 @@ const ITEM_SKILLS: Record<string, ItemSkillDef> = {
   // 拘束衣（手臂）
   StraitJacket: { group: "ItemArms", cn: "拘束衣" },
   LeatherStraitJacket: { group: "ItemArms", cn: "皮革拘束衣" },
+  // 宠物拘束服（#86，2026-09-08 用户截图确认）：BC 资产名 BitchSuit（中文亦称"宠物抱束服"），
+  //   TYPED（type 变量 z=拉链 0/1/2、st=束带 0/1），AllowLock+AllowTighten，SelfUnlock=false，
+  //   一体覆盖胸/腹/臂/腿，套上去就出 SetPose [BackElbowTouch,Kneel]。归在 ItemArms 槽
+  BitchSuit: { group: "ItemArms", cn: "宠物抱束服" },
   // 束带类（手臂）
   FullBodyLeatherHarness: { group: "ItemArms", cn: "全身皮革束带" },
   CollarCuffs: { group: "ItemArms", cn: "项圈连手铐（需对方已戴项圈）" },
@@ -1363,7 +1367,7 @@ const LOCKABLE_ITEMS = new Set([
   "ItemArms/LeatherCuffs", "ItemArms/LeatherArmbinder", "ItemArms/LatexArmbinder",
   "ItemArms/SeamlessLatexArmbinder", "ItemArms/ShinyArmbinder",
   "ItemArms/StraitJacket", "ItemArms/LeatherStraitJacket", "ItemArms/FullBodyLeatherHarness",
-  "ItemArms/CollarCuffs",
+  "ItemArms/CollarCuffs", "ItemArms/BitchSuit",
   "ItemLegs/LeatherLegCuffs", "ItemFeet/LeatherAnkleCuffs", "ItemFeet/SteelAnkleCuffs",
   "ItemBoots/BalletHeels",
   "ItemNeckRestraints/CollarLeash", "ItemNeckRestraints/ChainLeash",

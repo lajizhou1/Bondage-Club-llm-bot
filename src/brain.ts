@@ -466,14 +466,34 @@ async function callLLM(
   //   频率变高（21:55/23:38 两次实测），原逻辑只有网络失败才重试，空响应直接 throw，
   //   她的话就石沉大海。空响应多半是模型抽风，立刻重试一次大概率能救回来。
   //   网络/超时失败同样重试一次（doCall 覆盖 headers+正文全链路）；API 明确报错不重试。
-  let json: LlmJson;
-  try {
-    json = await doCall();
-  } catch (err) {
-    if (isApiError(err)) throw err;
-    console.error(`[brain] LLM call failed (${(err as Error).message}), retrying once...`);
-    json = await doCall();
+  // 429 限流（GLM 1305 "访问量过大"）：晚高峰常态，与 1301 审查性质不同——退避几秒大概率恢复。
+  //   2026-09-08 16:40 实测：晚高峰连续 4 轮全 429，旧逻辑与 1301 一样直接抛，她连说四句全落兜底台词。
+  //   最多退避重试 2 次（3s/8s），仍 429 才抛给上层兜底。退避期间她若发新消息，
+  //   本轮自然变 stale 被丢弃，由新一轮重试——不会发旧回复。
+  let json: LlmJson | null = null;
+  const backoff429 = [3000, 8000];
+  for (let attempt = 0; attempt <= backoff429.length; attempt++) {
+    try {
+      json = await doCall();
+      break;
+    } catch (err) {
+      if (isApiError(err) && err.apiStatus === 429) {
+        if (attempt < backoff429.length) {
+          console.error(`[brain] LLM 429 限流（第 ${attempt + 1} 次），${backoff429[attempt] / 1000}s 后重试...`);
+          await new Promise((r) => setTimeout(r, backoff429[attempt]));
+          continue;
+        }
+        console.error(`[brain] LLM 429 限流持续（${backoff429.length} 次退避重试均失败），抛给上层兜底`);
+        throw err;
+      }
+      if (isApiError(err)) throw err; // 1301 审查等明确拒答：不重试直接抛（旧语义）
+      // 网络/超时失败：重试一次（旧语义）
+      console.error(`[brain] LLM call failed (${(err as Error).message}), retrying once...`);
+      json = await doCall();
+      break;
+    }
   }
+  if (json === null) throw new Error("LLM call failed (unreachable)");
   let content = json?.choices?.[0]?.message?.content;
   if (typeof content !== "string" || !content) {
     console.error(`[brain] LLM returned empty content (${diagUsage(json?.usage)}), retrying once...`);

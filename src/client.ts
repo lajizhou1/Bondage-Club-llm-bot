@@ -761,6 +761,25 @@ export class BCClient {
     console.log(`[label-color] LabelColor 已设置：${hex}`);
   }
 
+  /** 设置角色描述（BIO，资料页第一屏）。
+   *  走 AccountUpdate.Description，官方上限 10000 字符
+   *  （OnlineProfile.js OnlineProfileTextDescMaxLen），纯文本支持换行。
+   *  官方保存时会 trim，这里保持一致。 */
+  setDescription(text: string): void {
+    const desc = text.trim();
+    if (!desc) {
+      console.warn("[description] 内容为空，跳过设置");
+      return;
+    }
+    if (desc.length > 10000) {
+      console.warn(`[description] 长度 ${desc.length} 超过 10000 字符上限，跳过设置`);
+      return;
+    }
+    this.limiter.send(C2S.AccountUpdate, { Description: desc });
+    this._player.Description = desc;
+    console.log(`[description] Description 已设置（${desc.length} 字符）`);
+  }
+
 
   /**
    * 直接触发目标身上电击道具的电流（#84）。
